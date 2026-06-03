@@ -282,7 +282,7 @@ export async function getSchedule(): Promise<Schedule> {
       siteName: siteName[e.site_id] ?? '',
       model: e.model,
       serialNumber: e.serial_number,
-      action: e.action === 'scrap' ? 'TO' : e.action,
+      action: e.status.dueAction ?? 'TO',
       nextDue: e.status.nextDue as string,
       daysUntil: e.status.daysUntil ?? 0,
       level: e.status.level,
