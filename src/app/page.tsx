@@ -28,6 +28,7 @@ export default async function Dashboard() {
           </div>
         </div>
         <div className="top-right">
+          <Link href="/kalendar" className="nav-link">📅 Календар</Link>
           <Link href="/skan" className="nav-scan">📷 Сканирай</Link>
           <div className="greet">
             <div className="hi">{greet(now.getHours())}, управител</div>

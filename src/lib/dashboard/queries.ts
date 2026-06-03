@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { computeExtinguisherStatus } from '@/lib/regulatory/engine';
-import type { ExtinguisherType } from '@/lib/regulatory/types';
+import type { ExtinguisherType, SuggestedAction } from '@/lib/regulatory/types';
 import { deriveStatus, type UiStatus, type StatusLevel } from './status';
 
 interface ExtRow {
@@ -29,6 +29,7 @@ interface History {
 
 export interface ExtWithStatus extends ExtRow {
   status: UiStatus;
+  action: SuggestedAction;
 }
 
 export interface SiteSummary {
@@ -68,7 +69,7 @@ function aggregate(events: EventRow[]): Record<string, History> {
   return h;
 }
 
-function statusFor(e: ExtRow, h: History, day: string): UiStatus {
+function evaluate(e: ExtRow, h: History, day: string): { status: UiStatus; action: SuggestedAction } {
   const res = computeExtinguisherStatus({
     type: e.type,
     manufactureYear: e.manufacture_year,
@@ -78,8 +79,10 @@ function statusFor(e: ExtRow, h: History, day: string): UiStatus {
     lastHI: h.lastHI,
     today: day,
   });
-  return deriveStatus(res, day);
+  return { status: deriveStatus(res, day), action: res.suggestedAction };
 }
+
+const EMPTY: History = { lastTO: null, lastRecharge: null, lastHI: null };
 
 async function allWithStatus(): Promise<ExtWithStatus[]> {
   const supabase = createServiceClient();
@@ -97,8 +100,10 @@ async function allWithStatus(): Promise<ExtWithStatus[]> {
     events = (data ?? []) as EventRow[];
   }
   const hist = aggregate(events);
-  const empty: History = { lastTO: null, lastRecharge: null, lastHI: null };
-  return rows.map((e) => ({ ...e, status: statusFor(e, hist[e.id] ?? empty, day) }));
+  return rows.map((e) => {
+    const ev = evaluate(e, hist[e.id] ?? EMPTY, day);
+    return { ...e, status: ev.status, action: ev.action };
+  });
 }
 
 export async function getOverview(): Promise<Overview> {
@@ -161,18 +166,19 @@ export async function getSite(siteId: string): Promise<SiteDetail | null> {
   if (!site) return null;
 
   const all = await allWithStatus();
+  const order: Record<StatusLevel, number> = { scrap: 0, overdue: 1, soon: 2, ok: 3 };
   const extinguishers = all
     .filter((e) => e.site_id === siteId)
-    .sort((a, b) => {
-      const order: Record<StatusLevel, number> = { scrap: 0, overdue: 1, soon: 2, ok: 3 };
-      return order[a.status.level] - order[b.status.level];
-    });
+    .sort((a, b) => order[a.status.level] - order[b.status.level]);
 
   const s = site as unknown as {
     id: string;
     name: string;
     address: string | null;
-    clients: { name: string; address: string | null; phone: string | null } | { name: string; address: string | null; phone: string | null }[] | null;
+    clients:
+      | { name: string; address: string | null; phone: string | null }
+      | { name: string; address: string | null; phone: string | null }[]
+      | null;
   };
   const cl = Array.isArray(s.clients) ? s.clients[0] : s.clients;
   return { site: { id: s.id, name: s.name, address: s.address }, client: cl ?? null, extinguishers };
@@ -207,9 +213,7 @@ export async function getExtinguisher(id: string): Promise<ExtinguisherDetail | 
     .eq('extinguisher_id', id)
     .order('service_date', { ascending: false });
   const events = (evRows ?? []) as Array<EventRow & { technician_name: string | null }>;
-
   const hist = aggregate(events);
-  const empty: History = { lastTO: null, lastRecharge: null, lastHI: null };
 
   const row = data as unknown as ExtRow & {
     sites: {
@@ -219,7 +223,7 @@ export async function getExtinguisher(id: string): Promise<ExtinguisherDetail | 
       clients: { name: string; phone: string | null } | { name: string; phone: string | null }[] | null;
     } | null;
   };
-  const status = statusFor(row, hist[id] ?? empty, day);
+  const { status, action } = evaluate(row, hist[id] ?? EMPTY, day);
   const site = row.sites;
   const clientRaw = site?.clients ?? null;
   const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
@@ -236,9 +240,61 @@ export async function getExtinguisher(id: string): Promise<ExtinguisherDetail | 
       mass_kg: row.mass_kg,
       stamp_year: row.stamp_year,
       status,
+      action,
     },
     site: { id: site?.id ?? '', name: site?.name ?? '', address: site?.address ?? null },
     client: client ? { name: client.name, phone: client.phone ?? null } : null,
     history: events.map((e) => ({ kind: e.kind, service_date: e.service_date, technician_name: e.technician_name })),
   };
+}
+
+export interface ScheduleItem {
+  id: string;
+  siteId: string;
+  siteName: string;
+  model: string | null;
+  serialNumber: string | null;
+  action: SuggestedAction;
+  nextDue: string;
+  daysUntil: number;
+  level: StatusLevel;
+}
+
+export interface Schedule {
+  counts: { TO: number; recharge: number; HI: number };
+  items: ScheduleItem[];
+}
+
+export async function getSchedule(): Promise<Schedule> {
+  const supabase = createServiceClient();
+  const [all, sitesRes] = await Promise.all([
+    allWithStatus(),
+    supabase.from('sites').select('id,name'),
+  ]);
+  const siteName: Record<string, string> = {};
+  for (const s of (sitesRes.data ?? []) as Array<{ id: string; name: string }>) siteName[s.id] = s.name;
+
+  const items: ScheduleItem[] = all
+    .filter((e) => (e.status.level === 'overdue' || e.status.level === 'soon') && e.status.nextDue)
+    .map((e) => ({
+      id: e.id,
+      siteId: e.site_id,
+      siteName: siteName[e.site_id] ?? '',
+      model: e.model,
+      serialNumber: e.serial_number,
+      action: e.action === 'scrap' ? 'TO' : e.action,
+      nextDue: e.status.nextDue as string,
+      daysUntil: e.status.daysUntil ?? 0,
+      level: e.status.level,
+    }))
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+
+  const counts = { TO: 0, recharge: 0, HI: 0 };
+  for (const it of items) {
+    if (it.action === 'TO') counts.TO++;
+    else if (it.action === 'recharge') counts.recharge++;
+    else if (it.action === 'HI') counts.HI++;
+  }
+
+  return { counts, items };
 }
