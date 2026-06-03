@@ -14,6 +14,10 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId: DEMO_SITE_ID }),
       });
+      if (!res.ok) {
+        alert(`Грешка при генериране (${res.status}).`);
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
