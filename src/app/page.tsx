@@ -27,9 +27,12 @@ export default async function Dashboard() {
             <div className="sub">Система за сервиз на пожарогасители</div>
           </div>
         </div>
-        <div className="greet">
-          <div className="hi">{greet(now.getHours())}, управител</div>
-          <div className="date">{dateStr}</div>
+        <div className="top-right">
+          <Link href="/skan" className="nav-scan">📷 Сканирай</Link>
+          <div className="greet">
+            <div className="hi">{greet(now.getHours())}, управител</div>
+            <div className="date">{dateStr}</div>
+          </div>
         </div>
       </header>
 

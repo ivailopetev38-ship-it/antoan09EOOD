@@ -1,7 +1,15 @@
 "use client";
 import { useState } from "react";
 
-export function GenerateProtocolButton({ siteId }: { siteId: string }) {
+export function GenerateProtocolButton({
+  siteId,
+  extinguisherId,
+  label,
+}: {
+  siteId: string;
+  extinguisherId?: string;
+  label?: string;
+}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -12,7 +20,7 @@ export function GenerateProtocolButton({ siteId }: { siteId: string }) {
       const res = await fetch("/api/protocols/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteId }),
+        body: JSON.stringify(extinguisherId ? { siteId, extinguisherId } : { siteId }),
       });
       if (!res.ok) {
         setErr(`Грешка при генериране (${res.status}).`);
@@ -38,7 +46,7 @@ export function GenerateProtocolButton({ siteId }: { siteId: string }) {
   return (
     <>
       <button className="btn btn-fire" onClick={generate} disabled={busy}>
-        {busy ? "Генерирам…" : "📄 Генерирай протокол"}
+        {busy ? "Генерирам…" : (label ?? "📄 Генерирай протокол")}
       </button>
       {err && <span className="hint" style={{ color: "var(--over)" }}>{err}</span>}
     </>

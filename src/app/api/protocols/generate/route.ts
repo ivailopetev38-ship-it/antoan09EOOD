@@ -24,9 +24,11 @@ interface History {
 
 export async function POST(req: NextRequest) {
   let siteId: string | undefined;
+  let onlyExtinguisherId: string | undefined;
   try {
     const body = await req.json();
     siteId = body?.siteId;
+    onlyExtinguisherId = typeof body?.extinguisherId === 'string' ? body.extinguisherId : undefined;
   } catch {
     return NextResponse.json({ error: 'Невалиден JSON' }, { status: 400 });
   }
@@ -43,7 +45,10 @@ export async function POST(req: NextRequest) {
   const { data: exts, error: extErr } = await supabase
     .from('extinguishers').select('*').eq('site_id', siteId).order('created_at');
   if (extErr) return NextResponse.json({ error: 'Грешка при четене на пожарогасители' }, { status: 500 });
-  const extList = exts ?? [];
+  const extListAll = exts ?? [];
+  const extList = onlyExtinguisherId
+    ? extListAll.filter((e) => e.id === onlyExtinguisherId)
+    : extListAll;
 
   // Последна дейност по вид за всеки пожарогасител (от историята)
   const ids = extList.map((e) => e.id);

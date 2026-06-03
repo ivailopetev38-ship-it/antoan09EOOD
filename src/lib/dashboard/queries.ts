@@ -177,3 +177,68 @@ export async function getSite(siteId: string): Promise<SiteDetail | null> {
   const cl = Array.isArray(s.clients) ? s.clients[0] : s.clients;
   return { site: { id: s.id, name: s.name, address: s.address }, client: cl ?? null, extinguishers };
 }
+
+export interface ServiceEvent {
+  kind: string;
+  service_date: string;
+  technician_name: string | null;
+}
+
+export interface ExtinguisherDetail {
+  ext: ExtWithStatus;
+  site: { id: string; name: string; address: string | null };
+  client: { name: string; phone: string | null } | null;
+  history: ServiceEvent[];
+}
+
+export async function getExtinguisher(id: string): Promise<ExtinguisherDetail | null> {
+  const supabase = createServiceClient();
+  const day = today();
+  const { data } = await supabase
+    .from('extinguishers')
+    .select('*, sites(id,name,address,clients(name,phone))')
+    .eq('id', id)
+    .single();
+  if (!data) return null;
+
+  const { data: evRows } = await supabase
+    .from('service_events')
+    .select('extinguisher_id,kind,service_date,technician_name')
+    .eq('extinguisher_id', id)
+    .order('service_date', { ascending: false });
+  const events = (evRows ?? []) as Array<EventRow & { technician_name: string | null }>;
+
+  const hist = aggregate(events);
+  const empty: History = { lastTO: null, lastRecharge: null, lastHI: null };
+
+  const row = data as unknown as ExtRow & {
+    sites: {
+      id: string;
+      name: string;
+      address: string | null;
+      clients: { name: string; phone: string | null } | { name: string; phone: string | null }[] | null;
+    } | null;
+  };
+  const status = statusFor(row, hist[id] ?? empty, day);
+  const site = row.sites;
+  const clientRaw = site?.clients ?? null;
+  const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
+
+  return {
+    ext: {
+      id: row.id,
+      site_id: row.site_id,
+      model: row.model,
+      serial_number: row.serial_number,
+      type: row.type,
+      manufacture_year: row.manufacture_year,
+      category: row.category,
+      mass_kg: row.mass_kg,
+      stamp_year: row.stamp_year,
+      status,
+    },
+    site: { id: site?.id ?? '', name: site?.name ?? '', address: site?.address ?? null },
+    client: client ? { name: client.name, phone: client.phone ?? null } : null,
+    history: events.map((e) => ({ kind: e.kind, service_date: e.service_date, technician_name: e.technician_name })),
+  };
+}

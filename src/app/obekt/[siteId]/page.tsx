@@ -51,7 +51,7 @@ export default async function SitePage({ params }: { params: Promise<{ siteId: s
 
       <div className="sec-h"><h2>Пожарогасители</h2><div className="meta">{extinguishers.length}</div></div>
       {extinguishers.map((e) => (
-        <div key={e.id} className={`ext ${e.status.level}`}>
+        <Link key={e.id} href={`/pg/${e.id}`} className={`ext ${e.status.level}`}>
           <div className="ico">🧯</div>
           <div className="main">
             <div className="nm">{e.model ?? TYPE_LABEL[e.type]}</div>
@@ -66,7 +66,7 @@ export default async function SitePage({ params }: { params: Promise<{ siteId: s
             <div className="lab">{e.status.label}</div>
             {e.status.nextDue && <div className="due">срок {bg(e.status.nextDue)}</div>}
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
