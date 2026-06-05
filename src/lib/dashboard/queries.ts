@@ -298,3 +298,32 @@ export async function getSchedule(): Promise<Schedule> {
 
   return { counts, items };
 }
+
+export interface EnrichedExt extends ExtWithStatus {
+  siteName: string;
+  clientName: string;
+}
+
+/** Всички пожарогасители със статус + име на обект и клиент (за Hermes справки). */
+export async function getEnrichedExtinguishers(): Promise<EnrichedExt[]> {
+  const supabase = createServiceClient();
+  const [all, sitesRes] = await Promise.all([
+    allWithStatus(),
+    supabase.from('sites').select('id,name,clients(name)'),
+  ]);
+  const sites = (sitesRes.data ?? []) as Array<{
+    id: string;
+    name: string;
+    clients: { name: string } | { name: string }[] | null;
+  }>;
+  const map: Record<string, { siteName: string; clientName: string }> = {};
+  for (const s of sites) {
+    const cl = Array.isArray(s.clients) ? s.clients[0] : s.clients;
+    map[s.id] = { siteName: s.name, clientName: cl?.name ?? '' };
+  }
+  return all.map((e) => ({
+    ...e,
+    siteName: map[e.site_id]?.siteName ?? '',
+    clientName: map[e.site_id]?.clientName ?? '',
+  }));
+}

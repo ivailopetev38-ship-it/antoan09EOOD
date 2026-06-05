@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireHermesAuth } from '@/lib/hermes/auth';
 import { buildProtocol } from '@/lib/protocol/build';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
+  const denied = requireHermesAuth(req);
+  if (denied) return denied;
+
   let body: { siteId?: string; extinguisherId?: string };
   try {
     body = await req.json();
