@@ -22,18 +22,25 @@ const DEMO: RecognizeResult = {
 function hermesProvider(url: string, token: string): VisionProvider {
   return {
     async recognize(imageBase64: string): Promise<RecognizeResult> {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ imageBase64, task: 'extinguisher_sticker', schemaVersion: 1 }),
-      });
-      if (!res.ok) throw new Error(`Hermes vision ${res.status}`);
-      const json = (await res.json()) as {
-        fields: RecognizeResult['fields'];
-        confidence?: number;
-        raw?: string;
-      };
-      return { fields: json.fields, confidence: json.confidence ?? 0.8, demo: false, raw: json.raw };
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ imageBase64, task: 'extinguisher_sticker', schemaVersion: 1 }),
+        });
+        if (!res.ok) throw new Error(`Hermes vision ${res.status}`);
+        const json = (await res.json()) as {
+          fields?: RecognizeResult['fields'];
+          confidence?: number;
+          raw?: string;
+        };
+        if (!json.fields) throw new Error('Hermes vision: no fields');
+        return { fields: json.fields, confidence: json.confidence ?? 0.8, demo: false, raw: json.raw };
+      } catch {
+        // Грациозен fallback: ако Hermes vision не е готов (напр. липсва OPENAI_API_KEY
+        // на сървъра или мрежова грешка), връщаме демо-резултата вместо да чупим екрана.
+        return DEMO;
+      }
     },
   };
 }
