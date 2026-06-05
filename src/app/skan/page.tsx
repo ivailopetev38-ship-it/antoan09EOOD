@@ -8,23 +8,13 @@ type Detector = { detect: (s: CanvasImageSource) => Promise<{ rawValue: string }
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
+  const [mode, setMode] = useState<"scanning" | "unsupported">("scanning");
   const [err, setErr] = useState<string | null>(null);
-  const [supported, setSupported] = useState(true);
 
   useEffect(() => {
-    const Ctor = (window as unknown as {
-      BarcodeDetector?: new (o: { formats: string[] }) => Detector;
-    }).BarcodeDetector;
-
-    if (!Ctor) {
-      setSupported(false);
-      return;
-    }
-
     let stream: MediaStream | null = null;
     let raf = 0;
     let stopped = false;
-    const detector = new Ctor({ formats: ["qr_code"] });
 
     function goTo(value: string) {
       stopped = true;
@@ -36,7 +26,15 @@ export default function ScanPage() {
       }
     }
 
-    (async () => {
+    async function start() {
+      const Ctor = (window as unknown as {
+        BarcodeDetector?: new (o: { formats: string[] }) => Detector;
+      }).BarcodeDetector;
+      if (!Ctor) {
+        setMode("unsupported");
+        return;
+      }
+      const detector = new Ctor({ formats: ["qr_code"] });
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         const v = videoRef.current;
@@ -61,7 +59,9 @@ export default function ScanPage() {
       } catch {
         setErr("Няма достъп до камера. Разреши камерата в браузъра.");
       }
-    })();
+    }
+
+    void start();
 
     return () => {
       stopped = true;
@@ -75,7 +75,7 @@ export default function ScanPage() {
       <Link href="/" className="back">← Табло</Link>
       <div className="sec-h"><h2>QR Скенер</h2></div>
 
-      {supported ? (
+      {mode === "scanning" ? (
         <div className="scan-box">
           <video ref={videoRef} playsInline muted className="scan-video" />
           <div className="scan-frame" />
