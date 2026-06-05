@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import StickerScan from "@/components/StickerScan";
 
 type Detector = { detect: (s: CanvasImageSource) => Promise<{ rawValue: string }[]> };
 
@@ -90,6 +91,8 @@ export default function ScanPage() {
           </p>
         </div>
       )}
+
+      <StickerScan />
     </div>
   );
 }
