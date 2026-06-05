@@ -741,7 +741,8 @@ git commit -m "feat(import): admin import page (/admin/import)"
 
 Всяка стъпва на Фаза 1 и получава свой подробен план преди изпълнение:
 
-- **Фаза 2 — AI стикер → протокол** (Компонент 2): Storage bucket `stickers`; `VisionProvider` интерфейс + „hermes" адаптер (`HERMES_VISION_URL`) + демо-fallback; `POST /api/vision/sticker`; разширяване на `/skan` + бутон на `/pg/[id]`; екран „Преглед" → Word/PDF; ръчен избор. *(Главната wow-функция.)*
+- **Фаза 2 — AI стикер → протокол** (Компонент 2): Storage bucket `stickers`; `VisionProvider` интерфейс + „hermes" адаптер (`HERMES_VISION_URL`) + демо-fallback; `POST /api/vision/sticker`; разширяване на `/skan` + бутон на `/pg/[id]`; екран „Преглед" → Word; ръчен избор. *(Главната wow-функция.)*
 - **Фаза 3 — Минимално въвеждане** (Компонент 3): форми „Нов обект/гасител" + „Запиши услуга"; `POST /api/service-events`; авто-преизчисляване на срокове през двигателя.
-- **Фаза 4 — PDF изход** (Компонент 5): `@react-pdf/renderer` шаблон огледален на Приложение №9; `?format=pdf`.
-- **Фаза 5 — Демо напомняния** (Компонент 4): екран `/napomnyania`; `NotifyProvider` (hermes/Telegram + fallback преглед); `POST /api/reminders/send`.
+- **Фаза 4 — Демо напомняния** (Компонент 4): екран `/napomnyania`; `NotifyProvider` (hermes/Telegram + fallback преглед); `POST /api/reminders/send`.
+
+*(PDF изход отпадна по желание на клиента — демото остава само Word.)*
