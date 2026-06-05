@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { getExtinguisher } from "@/lib/dashboard/queries";
 import { GenerateProtocolButton } from "@/components/GenerateProtocolButton";
+import RecordServiceForm from "@/components/RecordServiceForm";
 import type { ExtinguisherType } from "@/lib/regulatory/types";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function ExtinguisherPage({ params }: { params: Promise<{ i
           <Link className="btn" href="/skan" style={{ border: "1px solid var(--line2)", color: "inherit" }}>
             📸 Сканирай стикер
           </Link>
+          <RecordServiceForm extinguisherId={ext.id} />
           {ext.status.level === "scrap" && (
             <span className="hint" style={{ color: "var(--scrap)" }}>Бракуван — не влиза в протокол за предаване.</span>
           )}
