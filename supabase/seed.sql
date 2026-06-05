@@ -62,3 +62,12 @@ insert into service_events (extinguisher_id, kind, service_date, technician_name
  ('0e000000-0000-0000-0000-000000000010','powder_change','2025-08-01','П. Петров'),
  ('0e000000-0000-0000-0000-000000000003','TO','2025-09-01','Г. Георгиев'),
  ('0e000000-0000-0000-0000-000000000007','TO','2024-12-01','И. Иванов');
+
+-- Каталог гасителни вещества
+insert into agents (kind, trade_name) values
+ ('powder','Кобра ABC 50'),
+ ('powder','Верея ABC 40'),
+ ('foam','Щамекс FF'),
+ ('water','Вода'),
+ ('co2','CO2')
+on conflict (kind, trade_name) do nothing;
