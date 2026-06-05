@@ -70,6 +70,7 @@ export default function StickerScan() {
         style={{ marginTop: 10 }}
       />
       {preview && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={preview}
           alt="стикер"

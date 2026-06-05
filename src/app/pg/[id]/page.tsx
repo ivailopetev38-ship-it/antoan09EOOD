@@ -70,6 +70,9 @@ export default async function ExtinguisherPage({ params }: { params: Promise<{ i
 
         <div className="btn-row">
           <GenerateProtocolButton siteId={site.id} extinguisherId={ext.id} label="📄 Нов протокол" />
+          <Link className="btn" href="/skan" style={{ border: "1px solid var(--line2)", color: "inherit" }}>
+            📸 Сканирай стикер
+          </Link>
           {ext.status.level === "scrap" && (
             <span className="hint" style={{ color: "var(--scrap)" }}>Бракуван — не влиза в протокол за предаване.</span>
           )}
