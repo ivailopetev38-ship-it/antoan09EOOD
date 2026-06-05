@@ -32,20 +32,53 @@ export async function POST(req: Request) {
   const today = new Date().toISOString().slice(0, 10);
   const f = rec.fields;
 
-  // Намери гасителя по сериен № (за реален статус + протокол)
-  let match: { id: string; siteId: string; siteName: string } | null = null;
+  // Намери гасителя по сериен № (за реален статус + попълване на протокола)
+  let match:
+    | {
+        id: string;
+        siteId: string;
+        siteName: string;
+        ownerName: string;
+        ownerAddress: string;
+        ownerPhone: string;
+        category: string | null;
+        mass: number | null;
+      }
+    | null = null;
   if (f.serial) {
     const db = createServiceClient();
     const { data } = await db
       .from('extinguishers')
-      .select('id, site_id, sites(name)')
+      .select('id, site_id, category, mass_kg, sites(name, address, clients(name, address, phone))')
       .ilike('serial_number', f.serial)
       .limit(1)
       .maybeSingle();
     if (data) {
-      const site = (data as { sites?: { name?: string } | { name?: string }[] }).sites;
-      const siteName = (Array.isArray(site) ? site[0]?.name : site?.name) ?? '';
-      match = { id: data.id as string, siteId: data.site_id as string, siteName };
+      const d = data as {
+        id: string;
+        site_id: string;
+        category: string | null;
+        mass_kg: number | null;
+        sites?:
+          | { name?: string; address?: string; clients?: unknown }
+          | { name?: string; address?: string; clients?: unknown }[]
+          | null;
+      };
+      const site = Array.isArray(d.sites) ? d.sites[0] : d.sites;
+      const clRaw = (site as { clients?: unknown } | undefined)?.clients;
+      const cl = (Array.isArray(clRaw) ? clRaw[0] : clRaw) as
+        | { name?: string; address?: string; phone?: string }
+        | undefined;
+      match = {
+        id: d.id,
+        siteId: d.site_id,
+        siteName: site?.name ?? '',
+        ownerName: cl?.name ?? '',
+        ownerAddress: cl?.address ?? '',
+        ownerPhone: cl?.phone ?? '',
+        category: d.category,
+        mass: d.mass_kg,
+      };
     }
   }
 
