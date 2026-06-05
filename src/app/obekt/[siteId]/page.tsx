@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSite } from "@/lib/dashboard/queries";
 import { GenerateProtocolButton } from "@/components/GenerateProtocolButton";
+import AddExtinguisherForm from "@/components/AddExtinguisherForm";
 import type { ExtinguisherType } from "@/lib/regulatory/types";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export default async function SitePage({ params }: { params: Promise<{ siteId: s
       </div>
 
       <div className="sec-h"><h2>Пожарогасители</h2><div className="meta">{extinguishers.length}</div></div>
+      <AddExtinguisherForm siteId={site.id} />
       {extinguishers.map((e) => (
         <Link key={e.id} href={`/pg/${e.id}`} className={`ext ${e.status.level}`}>
           <div className="ico">🧯</div>
