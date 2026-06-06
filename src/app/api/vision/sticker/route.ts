@@ -45,13 +45,20 @@ export async function POST(req: Request) {
         ownerPhone: string;
         category: string | null;
         mass: number | null;
+        brand: string | null;
+        model: string | null;
+        type: string | null;
+        serial: string | null;
+        year: number | null;
       }
     | null = null;
   if (f.serial) {
     const db = createServiceClient();
     const { data } = await db
       .from('extinguishers')
-      .select('id, site_id, category, mass_kg, sites(name, address, clients(name, address, phone))')
+      .select(
+        'id, site_id, model, type, serial_number, manufacture_year, category, mass_kg, brands(name), sites(name, address, clients(name, address, phone))',
+      )
       .ilike('serial_number', f.serial)
       .limit(1)
       .maybeSingle();
@@ -59,8 +66,13 @@ export async function POST(req: Request) {
       const d = data as {
         id: string;
         site_id: string;
+        model: string | null;
+        type: string | null;
+        serial_number: string | null;
+        manufacture_year: number | null;
         category: string | null;
         mass_kg: number | null;
+        brands?: { name?: string } | { name?: string }[] | null;
         sites?:
           | { name?: string; address?: string; clients?: unknown }
           | { name?: string; address?: string; clients?: unknown }[]
@@ -71,6 +83,7 @@ export async function POST(req: Request) {
       const cl = (Array.isArray(clRaw) ? clRaw[0] : clRaw) as
         | { name?: string; address?: string; phone?: string }
         | undefined;
+      const br = Array.isArray(d.brands) ? d.brands[0] : d.brands;
       match = {
         id: d.id,
         siteId: d.site_id,
@@ -80,6 +93,11 @@ export async function POST(req: Request) {
         ownerPhone: cl?.phone ?? '',
         category: d.category,
         mass: d.mass_kg,
+        brand: br?.name ?? null,
+        model: d.model,
+        type: d.type,
+        serial: d.serial_number,
+        year: d.manufacture_year,
       };
     }
   }
