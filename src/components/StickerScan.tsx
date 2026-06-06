@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 
 interface Fields {
@@ -50,6 +50,8 @@ function today(): string {
 }
 
 export default function StickerScan() {
+  const camRef = useRef<HTMLInputElement>(null);
+  const galRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [resp, setResp] = useState<Resp | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -172,17 +174,39 @@ export default function StickerScan() {
 
   const f = resp?.fields;
   const m = resp?.match ?? null;
+  const btnBig: React.CSSProperties = { fontSize: 16, padding: '16px 22px', flex: '1 1 200px' };
 
   return (
-    <div className="scan-box" style={{ marginTop: 22, maxWidth: 560 }}>
-      <div className="sec-h"><h2>AI разпознаване по снимка</h2></div>
-      <p className="hint">Качи или снимай стикера — системата разпознава гасителя и подготвя протокола.</p>
-      <input type="file" accept="image/*" capture="environment" onChange={onFile} disabled={busy} style={{ marginTop: 10 }} />
+    <div className="scan-box" style={{ marginTop: 8, maxWidth: 600 }}>
+      <div className="sec-h"><h2>📸 Сканирай стикер (AI)</h2></div>
+      <p className="hint" style={{ marginBottom: 14 }}>
+        Снимай или качи стикера на пожарогасителя — системата го разпознава и подготвя протокола.
+      </p>
+
+      {/* скрити входове */}
+      <input ref={camRef} type="file" accept="image/*" capture="environment" onChange={onFile} style={{ display: 'none' }} />
+      <input ref={galRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+
+      {/* големи бутони */}
+      <div className="btn-row" style={{ marginTop: 0 }}>
+        <button className="btn btn-fire" style={btnBig} disabled={busy} onClick={() => camRef.current?.click()}>
+          📷 Снимай стикер
+        </button>
+        <button
+          className="btn"
+          style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }}
+          disabled={busy}
+          onClick={() => galRef.current?.click()}
+        >
+          🖼️ Качи снимка
+        </button>
+      </div>
+
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="стикер" style={{ maxWidth: 180, marginTop: 12, borderRadius: 10, display: 'block' }} />
+        <img src={preview} alt="стикер" style={{ maxWidth: 180, marginTop: 14, borderRadius: 10, display: 'block' }} />
       )}
-      {busy && <p className="hint" style={{ marginTop: 10 }}>Разпознаване…</p>}
+      {busy && <p className="hint" style={{ marginTop: 12, fontSize: 15 }}>🔎 Разпознаване…</p>}
 
       {resp?.ok && f && (
         <div style={{ marginTop: 16 }}>
@@ -205,38 +229,42 @@ export default function StickerScan() {
 
               <div style={{ display: 'grid', gap: 10 }}>
                 <label className="hint">Вид дейност
-                  <select value={action} onChange={(e) => setAction(e.target.value)} style={{ width: '100%', marginTop: 4 }}>
+                  <select value={action} onChange={(e) => setAction(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }}>
                     {KIND_OPTS.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}
                   </select>
                 </label>
                 <label className="hint">Дата
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }} />
                 </label>
                 <label className="hint">Техник
-                  <input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="напр. Х. Христов" style={{ width: '100%', marginTop: 4 }} />
+                  <input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="напр. Х. Христов" style={{ width: '100%', marginTop: 4, padding: 8 }} />
                 </label>
                 <label className="hint">Стикер №
-                  <input value={sticker} onChange={(e) => setSticker(e.target.value)} placeholder="напр. 0615" style={{ width: '100%', marginTop: 4 }} />
+                  <input value={sticker} onChange={(e) => setSticker(e.target.value)} placeholder="напр. 0615" style={{ width: '100%', marginTop: 4, padding: 8 }} />
                 </label>
                 {needsAgent && (
                   <label className="hint">Гасително вещество
-                    <input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} placeholder="напр. Кобра ABC 50" style={{ width: '100%', marginTop: 4 }} />
+                    <input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} placeholder="напр. Кобра ABC 50" style={{ width: '100%', marginTop: 4, padding: 8 }} />
                   </label>
                 )}
                 <label className="hint">Забележки
-                  <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="по избор" style={{ width: '100%', marginTop: 4 }} />
+                  <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="по избор" style={{ width: '100%', marginTop: 4, padding: 8 }} />
                 </label>
               </div>
 
               <div className="btn-row" style={{ marginTop: 16 }}>
-                <button className="btn btn-fire" disabled={gen} onClick={generateWord}>📄 Генерирай Word</button>
-                <button className="btn" style={{ border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen} onClick={sendEmail}>✉ Изпрати на имейл</button>
+                <button className="btn btn-fire" style={btnBig} disabled={gen} onClick={generateWord}>📄 Генерирай Word</button>
+                <button className="btn" style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen} onClick={sendEmail}>✉ Изпрати на имейл</button>
+              </div>
+              <div style={{ marginTop: 10 }}>
                 <Link className="btn" href={`/pg/${m.id}`} style={{ border: '1px solid var(--line2)', color: 'inherit' }}>Виж картата</Link>
               </div>
               {mail && <p className="hint" style={{ marginTop: 10, color: mail.startsWith('✓') ? 'var(--ok)' : 'var(--over)' }}>{mail}</p>}
             </div>
           ) : (
-            <p className="hint" style={{ marginTop: 10 }}>Няма съвпадение по сериен № в базата. Добави гасителя ръчно от обекта.</p>
+            <p className="hint" style={{ marginTop: 10 }}>
+              Няма съвпадение по сериен № в базата. Добави гасителя ръчно от обекта.
+            </p>
           )}
         </div>
       )}

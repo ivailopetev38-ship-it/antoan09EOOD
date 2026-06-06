@@ -74,7 +74,10 @@ export default function ScanPage() {
   return (
     <div className="wrap">
       <Link href="/" className="back">← Табло</Link>
-      <div className="sec-h"><h2>QR Скенер</h2></div>
+
+      <StickerScan />
+
+      <div className="sec-h" style={{ marginTop: 28 }}><h2>или сканирай QR код</h2></div>
 
       {mode === "scanning" ? (
         <div className="scan-box">
@@ -91,8 +94,6 @@ export default function ScanPage() {
           </p>
         </div>
       )}
-
-      <StickerScan />
     </div>
   );
 }
