@@ -4,6 +4,7 @@ import { getVisionProvider } from '@/lib/vision/provider';
 import { stickerToEngineInput } from '@/lib/vision/map';
 import { computeExtinguisherStatus } from '@/lib/regulatory/engine';
 import { deriveStatus } from '@/lib/dashboard/status';
+import { parseRawSticker, mergeStickerFields } from '@/lib/vision/parseRaw';
 import type { RecognizeResult } from '@/lib/vision/types';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const f = rec.fields;
+  // Слива разпознатите полета с тези, извлечени от суровия OCR текст (работи и без OpenAI).
+  const f = mergeStickerFields(rec.fields, parseRawSticker(rec.raw ?? ''));
 
   // Намери гасителя по сериен № (за реален статус + попълване на протокола)
   let match:
