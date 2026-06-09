@@ -54,14 +54,27 @@ export async function POST(req: Request) {
     | null = null;
   if (f.serial) {
     const db = createServiceClient();
-    const { data } = await db
-      .from('extinguishers')
-      .select(
-        'id, site_id, model, type, serial_number, manufacture_year, category, mass_kg, brands(name), sites(name, address, clients(name, address, phone))',
-      )
-      .ilike('serial_number', f.serial)
-      .limit(1)
-      .maybeSingle();
+    const SELECT =
+      'id, site_id, model, type, serial_number, manufacture_year, category, mass_kg, brands(name), sites(name, address, clients(name, address, phone))';
+    const exact = await db.from('extinguishers').select(SELECT).ilike('serial_number', f.serial).limit(1).maybeSingle();
+    let data = exact.data;
+    if (!data) {
+      // Толерантно съвпадение: ако точното пропадне (OCR е разместил тире/интервал),
+      // сравняваме нормализирано (без не-буквено-цифрови) и приемаме само при ЕДИН кандидат.
+      const norm = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      const target = norm(f.serial);
+      if (target.length >= 4) {
+        const list = await db.from('extinguishers').select('id, serial_number');
+        const cands = ((list.data ?? []) as Array<{ id: string; serial_number: string | null }>).filter((r) => {
+          const n = norm(r.serial_number ?? '');
+          return n.length >= 4 && (n.includes(target) || target.includes(n));
+        });
+        if (cands.length === 1) {
+          const full = await db.from('extinguishers').select(SELECT).eq('id', cands[0].id).maybeSingle();
+          data = full.data;
+        }
+      }
+    }
     if (data) {
       const d = data as {
         id: string;
