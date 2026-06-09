@@ -30,9 +30,9 @@ export function parseRawSticker(raw: string): Partial<StickerFields> {
   const cap = /(\d+(?:[.,]\d+)?)\s*(?:кг|kg|л|l)(?![а-яА-Яa-z])/i.exec(t);
   if (cap) out.capacityKg = Number(cap[1].replace(',', '.'));
 
-  // сериен № — взима само чистия токен (спира на интервал)
-  const ser = /(?:сериен|serial)[^\n]{0,14}?([A-Za-z]{0,4}-?\d[A-Za-z0-9\-_/]*)/i.exec(t);
-  if (ser) out.serial = ser[1];
+  // сериен № — толерантен към OCR-интервали и тирета (напр. „ABC -1002" → „ABC-1002")
+  const ser = /(?:сериен|serial)[^\n]{0,14}?([A-Za-z]{0,5}\s?[-–—]?\s?\d[A-Za-z0-9\-–—_/]*)/i.exec(t);
+  if (ser) out.serial = ser[1].replace(/[–—]/g, '-').replace(/\s+/g, '').replace(/^-+/, '');
 
   // година на производство (предпочита „производство", после общо „година/year"; „годен до" ≠ „година")
   const yr = /(?:произв\w*|production|година|year)[^\d\n]{0,12}(\d{4})/i.exec(t);

@@ -54,6 +54,13 @@ describe('parseRawSticker', () => {
   it('празен текст → празно', () => {
     expect(parseRawSticker('')).toEqual({});
   });
+
+  it('нормализира буквено-цифров сериен № с OCR-интервал/тире', () => {
+    expect(parseRawSticker('Сериен No: ABC-1002\nГодина: 2015').serial).toBe('ABC-1002');
+    expect(parseRawSticker('Сериен No: ABC -1002\nГодина: 2015').serial).toBe('ABC-1002'); // OCR интервал
+    expect(parseRawSticker('Serial No: SN123456').serial).toBe('SN123456'); // без тире
+    expect(parseRawSticker('Сериен №: 0036').serial).toBe('0036'); // само цифри
+  });
 });
 
 describe('mergeStickerFields', () => {
