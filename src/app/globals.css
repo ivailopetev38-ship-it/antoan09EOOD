@@ -178,6 +178,26 @@ a.ext:hover { border-color: var(--line2); background: var(--panel2); }
 .qr-box img { background: #fff; padding: 10px; border-radius: 12px; width: 180px; height: 180px; }
 .qr-box .hint { margin-top: 12px; }
 
+/* ---- qr печатен лист ---- */
+.qr-site-h { font-size: 16px; margin: 0 0 8px; }
+.qr-count { color: var(--muted); font-weight: 400; }
+.qr-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.qr-label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--panel); }
+.qr-label img { width: 84px; height: 84px; background: #fff; border-radius: 6px; padding: 4px; flex: none; }
+.qr-label-txt { font-size: 13px; line-height: 1.35; min-width: 0; }
+.qr-serial { font-weight: 700; }
+.qr-meta { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+
+@media print {
+  .no-print { display: none !important; }
+  .top-bar, nav, .topbar { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .wrap { padding: 0 !important; }
+  .qr-sheet { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .qr-label { border-color: #999; background: #fff; break-inside: avoid; }
+  .qr-label-txt, .qr-serial, .qr-meta, .qr-site-h, .qr-count { color: #000 !important; }
+}
+
 /* ---- scanner ---- */
 .scan-box { position: relative; max-width: 480px; }
 .scan-video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); background: #000; display: block; }

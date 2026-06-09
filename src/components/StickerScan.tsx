@@ -12,11 +12,22 @@ interface Match {
   type: string | null; serial: string | null; year: number | null;
 }
 interface Resp {
-  ok: boolean; demo?: boolean; fields?: Fields; match?: Match | null;
+  ok: boolean; demo?: boolean; confidence?: number; fields?: Fields; match?: Match | null;
   status?: { level: string; label: string; dueAction?: 'TO' | 'recharge' | 'HI' | null } | null;
   error?: string;
 }
 interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string }
+
+// Минимални типове за Web Speech API (за гласов вход без външни зависимости).
+type SpeechRec = {
+  lang: string; interimResults: boolean; maxAlternatives: number;
+  onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
+  onend: () => void; onerror: () => void; start: () => void; stop: () => void;
+};
+type SpeechWin = Window & {
+  SpeechRecognition?: new () => SpeechRec;
+  webkitSpeechRecognition?: new () => SpeechRec;
+};
 
 const AGENT_LABEL: Record<string, string> = { powder_abc: 'Прах', powder_bc: 'Прах', water: 'Вода', foam: 'Пяна', co2: 'CO2' };
 const KIND_LABEL: Record<string, string> = { TO: 'ТО', recharge: 'П', HI: 'ХИ' };
@@ -36,6 +47,38 @@ const chipClass = (l?: string) => (l === 'overdue' ? 'over' : l ?? '');
 const bg = (iso: string) => iso.split('-').reverse().join('.');
 const today = () => new Date().toISOString().slice(0, 10);
 const fieldStyle: React.CSSProperties = { width: '100%', marginTop: 4, padding: 9, fontSize: 15 };
+
+// Смалява снимката до ~1280px JPEG преди качване (по-бързо + избягва timeouts на голями файлове).
+async function loadImageDataUrl(file: File): Promise<string> {
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const maxDim = 1280;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        if (!ctx) { reject(new Error('no ctx')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+      img.src = url;
+    });
+  } catch {
+    return await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(new Error('read'));
+      r.readAsDataURL(file);
+    });
+  }
+}
 
 export default function StickerScan() {
   const camRef = useRef<HTMLInputElement>(null);
@@ -62,48 +105,73 @@ export default function StickerScan() {
   const [gen, setGen] = useState(false);
   const [mail, setMail] = useState<string | null>(null);
 
+  // Гласов вход за бележките (Web Speech API, безплатно, на български).
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const recRef = useRef<SpeechRec | null>(null);
+  useEffect(() => {
+    const w = window as unknown as SpeechWin;
+    setVoiceSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+  }, []);
+  function toggleVoice() {
+    if (listening) { recRef.current?.stop(); setListening(false); return; }
+    const w = window as unknown as SpeechWin;
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) return;
+    const rec = new Ctor();
+    rec.lang = 'bg-BG'; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = (ev) => {
+      const t = ev.results?.[0]?.[0]?.transcript ?? '';
+      if (t) setNotes((p) => (p ? `${p} ${t}` : t));
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recRef.current = rec;
+    setListening(true);
+    try { rec.start(); } catch { setListening(false); }
+  }
+
   const needsAgent = action === 'recharge';
 
   useEffect(() => {
     fetch('/api/sites').then((r) => r.json()).then((j) => setSites(j.sites ?? [])).catch(() => {});
   }, []);
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setResp(null); setMail(null); setAdded(null); setPickedSite('');
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
+    setBusy(true);
+    try {
+      const dataUrl = await loadImageDataUrl(file);
       setPreview(dataUrl);
       const base64 = dataUrl.split(',')[1] ?? '';
-      setBusy(true);
-      try {
-        const r = await fetch('/api/vision/sticker', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64 }),
-        });
-        const j: Resp = await r.json();
-        setResp(j);
-        const mm = j.match; const ff = j.fields;
-        setEBrand((mm?.brand ?? ff?.brand) ?? '');
-        setEModel((mm?.model ?? ff?.model) ?? '');
-        setESerial((mm?.serial ?? ff?.serial) ?? '');
-        setEYear(String(mm?.year ?? ff?.year ?? ''));
-        setEType(String(mm?.type ?? ff?.type ?? 'powder_abc'));
-        setECap(String(mm?.mass ?? ff?.capacityKg ?? ''));
-        if (j.status?.dueAction) setAction(j.status.dueAction);
-        if (ff?.agent) setAgentTrade(ff.agent);
-      } catch {
-        setResp({ ok: false, error: 'Грешка при заявката' });
-      } finally {
-        setBusy(false);
-      }
-    };
-    reader.readAsDataURL(file);
+      const r = await fetch('/api/vision/sticker', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      const j: Resp = await r.json();
+      setResp(j);
+      const mm = j.match; const ff = j.fields;
+      setEBrand((mm?.brand ?? ff?.brand) ?? '');
+      setEModel((mm?.model ?? ff?.model) ?? '');
+      setESerial((mm?.serial ?? ff?.serial) ?? '');
+      setEYear(String(mm?.year ?? ff?.year ?? ''));
+      setEType(String(mm?.type ?? ff?.type ?? 'powder_abc'));
+      setECap(String(mm?.mass ?? ff?.capacityKg ?? ''));
+      if (j.status?.dueAction) setAction(j.status.dueAction);
+      if (ff?.agent) setAgentTrade(ff.agent);
+    } catch {
+      setResp({ ok: false, error: 'Грешка при заявката' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   const matched = resp?.match ?? null;
+  const f = resp?.fields;
+  const recognized = !!(f?.serial || f?.brand || f?.model || matched);
+  const lowConfidence = typeof resp?.confidence === 'number' && resp.confidence > 0 && resp.confidence < 0.5;
   const picked = sites.find((s) => s.id === pickedSite) ?? null;
   const owner = matched
     ? { name: matched.ownerName, address: matched.ownerAddress, phone: matched.ownerPhone, siteId: matched.siteId }
@@ -176,7 +244,6 @@ export default function StickerScan() {
     } catch { setAdded('✗ Мрежова грешка'); } finally { setGen(false); }
   }
 
-  const f = resp?.fields;
   const btnBig: React.CSSProperties = { fontSize: 16, padding: '16px 22px', flex: '1 1 200px' };
   const capOptions = CAP_OPTS.includes(eCap) || !eCap ? CAP_OPTS : [eCap, ...CAP_OPTS];
 
@@ -201,13 +268,13 @@ export default function StickerScan() {
       {resp?.ok && f && (
         <div style={{ border: '1px solid var(--line2)', borderRadius: 14, padding: 16, marginTop: 16 }}>
           <div style={{ fontWeight: 700 }}>
-            Разпознат гасител
+            {matched ? '✓ Разпознат гасител' : recognized ? 'Разпознат гасител' : '⚠ Стикерът не се разчете ясно'}
             {resp.status && <span className={`chip ${chipClass(resp.status.level)}`} style={{ marginLeft: 10 }}>{resp.status.label}</span>}
           </div>
 
           {matched ? (
             <p className="hint" style={{ marginTop: 6 }}>✓ Намерен в базата · Клиент: <b>{matched.ownerName}</b> · Обект: {matched.siteName}</p>
-          ) : (
+          ) : recognized ? (
             <div style={{ marginTop: 10 }}>
               <p className="hint" style={{ color: 'var(--soon)' }}>⚠ Непознат гасител (не е в базата). Избери обект, за да продължиш:</p>
               <select value={pickedSite} onChange={(e) => setPickedSite(e.target.value)} style={fieldStyle}>
@@ -215,6 +282,18 @@ export default function StickerScan() {
                 {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
               </select>
             </div>
+          ) : (
+            <div style={{ marginTop: 10 }}>
+              <p className="hint" style={{ color: 'var(--over)' }}>⚠ Не разчетох стикера ясно. Снимай по-отблизо и на светло, или въведи данните ръчно по-долу и избери обект:</p>
+              <select value={pickedSite} onChange={(e) => setPickedSite(e.target.value)} style={fieldStyle}>
+                <option value="">— избери обект —</option>
+                {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
+              </select>
+            </div>
+          )}
+
+          {lowConfidence && recognized && (
+            <p className="hint" style={{ marginTop: 8, color: 'var(--soon)' }}>ℹ Ниска сигурност на разпознаване — провери внимателно полетата.</p>
           )}
 
           <p className="hint" style={{ margin: '12px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай от менютата:</p>
@@ -245,7 +324,23 @@ export default function StickerScan() {
             </div>
             <label className="hint">Техник<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
             {needsAgent && <label className="hint">Гасително вещество<input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50" /></label>}
-            <label className="hint">Забележки<input value={notes} onChange={(e) => setNotes(e.target.value)} style={fieldStyle} placeholder="по избор" /></label>
+            <label className="hint">Забележки{voiceSupported && ' (може и гласово)'}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 4 }}>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...fieldStyle, marginTop: 0, flex: 1, resize: 'vertical' }} placeholder="по избор — напиши или продиктувай" />
+                {voiceSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleVoice}
+                    title={listening ? 'Спри диктовката' : 'Диктувай бележка'}
+                    className="btn"
+                    style={{ padding: '10px 13px', border: '1px solid var(--line2)', color: 'inherit', background: listening ? 'var(--over)' : undefined }}
+                  >
+                    {listening ? '⏹' : '🎤'}
+                  </button>
+                )}
+              </div>
+              {listening && <span className="hint" style={{ color: 'var(--soon)' }}>🎙️ Слушам… говори на български.</span>}
+            </label>
           </div>
 
           <div className="btn-row" style={{ marginTop: 16 }}>

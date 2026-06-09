@@ -1,5 +1,6 @@
 import type { VisionProvider, RecognizeResult } from './types';
 
+// Канонично демо — ползва се САМО когато Hermes изобщо не е конфигуриран (локален преглед).
 const DEMO: RecognizeResult = {
   demo: true,
   confidence: 0.66,
@@ -16,6 +17,17 @@ const DEMO: RecognizeResult = {
       { kind: 'recharge', date: '2025-12-01' },
     ],
     scrapYear: 2037,
+  },
+};
+
+// При неуспех/грешка от Hermes връщаме ПРАЗЕН резултат (без фалшив сериен №),
+// за да няма лъжливо съвпадение с реален гасител. UI-то показва „не разчетено — въведи ръчно".
+const UNRECOGNIZED: RecognizeResult = {
+  demo: true,
+  confidence: 0,
+  fields: {
+    brand: null, model: null, serial: null, year: null,
+    type: null, capacityKg: null, agent: null, stamps: [], scrapYear: null,
   },
 };
 
@@ -37,9 +49,9 @@ function hermesProvider(url: string, token: string): VisionProvider {
         if (!json.fields) throw new Error('Hermes vision: no fields');
         return { fields: json.fields, confidence: json.confidence ?? 0.8, demo: false, raw: json.raw };
       } catch {
-        // Грациозен fallback: ако Hermes vision не е готов (напр. липсва OPENAI_API_KEY
-        // на сървъра или мрежова грешка), връщаме демо-резултата вместо да чупим екрана.
-        return DEMO;
+        // Грациозен fallback: при мрежова грешка/таймаут НЕ фабрикуваме сериен №
+        // (иначе случайна снимка би „съвпаднала" с реален гасител). Връщаме празно.
+        return UNRECOGNIZED;
       }
     },
   };
