@@ -31,8 +31,8 @@ export async function POST(req: Request) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  // Слива разпознатите полета с тези, извлечени от суровия OCR текст (работи и без OpenAI).
-  const f = mergeStickerFields(rec.fields, parseRawSticker(rec.raw ?? ''));
+  // Предпочита чистия локален парсер на суровия текст; полетата от Hermes допълват липсите.
+  const f = mergeStickerFields(parseRawSticker(rec.raw ?? ''), rec.fields);
 
   // Намери гасителя по сериен № (за реален статус + попълване на протокола)
   let match:

@@ -2,23 +2,27 @@ import { normalizeType, parseFlexDate } from '@/lib/import/normalize';
 import type { StickerFields } from './types';
 
 const KNOWN_BRANDS = [
-  'Солти', 'Огнехром', 'Огниохрон', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria',
-  'Bavaria', 'Total', 'Ceasefire', 'Minimax', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul',
-  'Kidde', 'Amerex', 'Pastor', 'Полуш', 'Огнеборец', 'Спарк',
+  'Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total',
+  'Ceasefire', 'Minimax', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor',
 ];
 
-/** Извлича структурирани полета от суров OCR текст (BG стикер). */
+const DATE = '(\\d{1,2}\\.\\d{1,2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})';
+function toIso(d: string): string | null {
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : parseFlexDate(d);
+}
+
+/** Двуезичен (BG/EN), толерантен парсер на суров OCR текст → структурирани полета. */
 export function parseRawSticker(raw: string): Partial<StickerFields> {
   const t = (raw ?? '').replace(/\r/g, ' ');
   const out: Partial<StickerFields> = {};
   if (!t.trim()) return out;
 
   for (const b of KNOWN_BRANDS) {
-    if (new RegExp(b, 'i').test(t)) {
-      out.brand = b;
-      break;
-    }
+    if (new RegExp(b, 'i').test(t)) { out.brand = b; break; }
   }
+
+  const md = /(?:модел|model)\s*[:.\-]?\s*([A-Za-zА-Яа-я0-9][^\n]{1,38})/i.exec(t);
+  if (md) out.model = md[1].trim().replace(/\s{3,}.*$/, '').trim();
 
   const ty = normalizeType(t);
   if (ty) out.type = ty;
@@ -26,38 +30,43 @@ export function parseRawSticker(raw: string): Partial<StickerFields> {
   const cap = /(\d+(?:[.,]\d+)?)\s*(?:кг|kg|л|l)(?![а-яА-Яa-z])/i.exec(t);
   if (cap) out.capacityKg = Number(cap[1].replace(',', '.'));
 
-  const ser = /сериен[^:\n]*[:\s]\s*([A-Za-z0-9][A-Za-z0-9\-_/]{2,})/i.exec(t);
+  // сериен № — взима само чистия токен (спира на интервал)
+  const ser = /(?:сериен|serial)[^\n]{0,14}?([A-Za-z]{0,4}-?\d[A-Za-z0-9\-_/]*)/i.exec(t);
   if (ser) out.serial = ser[1];
 
-  const yr = /(?:година|год\.?|произв)[^\d]{0,6}(\d{4})/i.exec(t);
+  // година на производство (предпочита „производство", после общо „година/year"; „годен до" ≠ „година")
+  const yr = /(?:произв\w*|production|година|year)[^\d\n]{0,12}(\d{4})/i.exec(t);
   if (yr) out.year = Number(yr[1]);
 
-  const sc = /(?:годен\s*до|щампа)[^\d]{0,6}(\d{4})/i.exec(t);
+  const sc = /(?:годен\s*до|щампа|scrap)[^\d\n]{0,12}(\d{4})/i.exec(t);
   if (sc) out.scrapYear = Number(sc[1]);
 
   const stamps: StickerFields['stamps'] = [];
   const grab = (re: RegExp): string | null => {
     const m = re.exec(t);
-    return m ? parseFlexDate(m[1]) : null;
+    return m ? toIso(m[1]) : null;
   };
-  const to = grab(/(?:^|[\s;.,])ТО[^\d]{0,6}(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  const to = grab(new RegExp('(?:^|[\\s;.,])(?:ТО|TO)[^\\d]{0,6}' + DATE, 'i'));
   if (to) stamps.push({ kind: 'TO', date: to });
-  const pz = grab(/(?:презареж|смяна)[^\d]{0,14}(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  const pz = grab(new RegExp('(?:презареж|смяна|recharge)[^\\d]{0,14}' + DATE, 'i'));
   if (pz) stamps.push({ kind: 'recharge', date: pz });
-  const hi = grab(/(?:хидрост|(?:^|[\s;.,])ХИ)[^\d]{0,6}(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  const hi = grab(new RegExp('(?:хидрост|(?:^|[\\s;.,])(?:ХИ|HI))[^\\d]{0,6}' + DATE, 'i'));
   if (hi) stamps.push({ kind: 'HI', date: hi });
   if (stamps.length) out.stamps = stamps;
 
   return out;
 }
 
-/** Слива разпознати полета: ползва primary, ако е налично; иначе допълва от extra. */
-export function mergeStickerFields(primary: StickerFields, extra: Partial<StickerFields>): StickerFields {
+/** Слива полета: ползва primary, ако е налично; иначе допълва от extra. */
+export function mergeStickerFields(primary: Partial<StickerFields>, extra: Partial<StickerFields>): StickerFields {
   const has = (v: unknown) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0);
-  const out = { ...primary };
-  (Object.keys(extra) as (keyof StickerFields)[]).forEach((k) => {
+  const base: StickerFields = {
+    brand: null, model: null, serial: null, year: null, type: null, capacityKg: null, agent: null, stamps: [], scrapYear: null,
+  };
+  const out = { ...base, ...primary } as StickerFields;
+  (Object.keys(base) as (keyof StickerFields)[]).forEach((k) => {
     if (!has(out[k]) && has(extra[k])) {
-      // @ts-expect-error индексирано присвояване между съвместими полета
+      // @ts-expect-error съвместимо индексирано присвояване
       out[k] = extra[k];
     }
   });
