@@ -251,7 +251,8 @@ export default function StickerScan() {
   return (
     <div className="scan-box" style={{ marginTop: 8, maxWidth: 600 }}>
       <div className="sec-h"><h2>📸 Сканирай стикер (AI)</h2></div>
-      <p className="hint" style={{ marginBottom: 14 }}>Снимай или качи стикера — после потвърждаваш/коригираш от менютата.</p>
+      <p className="hint" style={{ marginBottom: 8 }}>Снимай или качи стикера — после потвърждаваш/коригираш от менютата.</p>
+      <p className="hint" style={{ marginBottom: 14, color: 'var(--soon)' }}>💡 Снимай <b>отблизо самия етикет/стикер</b> (не целия гасител) — така AI разчита марка, сериен № и дати.</p>
 
       <input ref={camRef} type="file" accept="image/*" capture="environment" onChange={onFile} style={{ display: 'none' }} />
       <input ref={galRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
