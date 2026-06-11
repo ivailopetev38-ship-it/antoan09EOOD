@@ -119,5 +119,5 @@ export async function POST(req: Request) {
   const inp = stickerToEngineInput(f, today);
   const status = inp ? deriveStatus(computeExtinguisherStatus(inp), today) : null;
 
-  return NextResponse.json({ ok: true, demo: rec.demo, confidence: rec.confidence, fields: f, match, status });
+  return NextResponse.json({ ok: true, demo: rec.demo, confidence: rec.confidence, fields: f, match, status, raw: rec.raw ?? null });
 }

@@ -11,15 +11,46 @@ function toIso(d: string): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : parseFlexDate(d);
 }
 
+// Разстояние на Левенщайн (за толериране на OCR грешки в марката).
+function lev(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/** Намира марка в текста: първо точно (substring), после размито (OCR грешки). */
+function detectBrand(lower: string): string | undefined {
+  for (const b of KNOWN_BRANDS) {
+    if (lower.includes(b.toLowerCase())) return b;
+  }
+  const words = lower.split(/[^a-zа-я0-9]+/i).filter((w) => w.length >= 4);
+  for (const b of KNOWN_BRANDS) {
+    const bl = b.toLowerCase();
+    const tol = bl.length >= 6 ? 2 : 1;
+    for (const w of words) {
+      if (Math.abs(w.length - bl.length) <= tol && lev(w, bl) <= tol) return b;
+    }
+  }
+  return undefined;
+}
+
 /** Двуезичен (BG/EN), толерантен парсер на суров OCR текст → структурирани полета. */
 export function parseRawSticker(raw: string): Partial<StickerFields> {
   const t = (raw ?? '').replace(/\r/g, ' ');
   const out: Partial<StickerFields> = {};
   if (!t.trim()) return out;
 
-  for (const b of KNOWN_BRANDS) {
-    if (new RegExp(b, 'i').test(t)) { out.brand = b; break; }
-  }
+  const brand = detectBrand(t.toLowerCase());
+  if (brand) out.brand = brand;
 
   const md = /(?:модел|model)\s*[:.\-]?\s*([A-Za-zА-Яа-я0-9][^\n]{1,38})/i.exec(t);
   if (md) out.model = md[1].trim().replace(/\s{3,}.*$/, '').trim();

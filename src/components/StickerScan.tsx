@@ -14,6 +14,7 @@ interface Match {
 interface Resp {
   ok: boolean; demo?: boolean; confidence?: number; fields?: Fields; match?: Match | null;
   status?: { level: string; label: string; dueAction?: 'TO' | 'recharge' | 'HI' | null } | null;
+  raw?: string | null;
   error?: string;
 }
 interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string }
@@ -56,7 +57,7 @@ async function loadImageDataUrl(file: File): Promise<string> {
       const url = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(url);
-        const maxDim = 1280;
+        const maxDim = 1600;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const w = Math.max(1, Math.round(img.width * scale));
         const h = Math.max(1, Math.round(img.height * scale));
@@ -170,7 +171,7 @@ export default function StickerScan() {
 
   const matched = resp?.match ?? null;
   const f = resp?.fields;
-  const recognized = !!(f?.serial || f?.brand || f?.model || matched);
+  const recognized = !!(f?.serial || f?.brand || f?.model || f?.type || f?.capacityKg || matched);
   const lowConfidence = typeof resp?.confidence === 'number' && resp.confidence > 0 && resp.confidence < 0.5;
   const picked = sites.find((s) => s.id === pickedSite) ?? null;
   const owner = matched
@@ -294,6 +295,13 @@ export default function StickerScan() {
 
           {lowConfidence && recognized && (
             <p className="hint" style={{ marginTop: 8, color: 'var(--soon)' }}>ℹ Ниска сигурност на разпознаване — провери внимателно полетата.</p>
+          )}
+
+          {resp.raw && (
+            <details style={{ marginTop: 10 }}>
+              <summary className="hint" style={{ cursor: 'pointer' }}>📄 Прочетен текст от снимката (OCR)</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: 'var(--muted)', marginTop: 6, padding: 8, background: 'var(--panel2)', borderRadius: 8 }}>{resp.raw}</pre>
+            </details>
           )}
 
           <p className="hint" style={{ margin: '12px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай от менютата:</p>

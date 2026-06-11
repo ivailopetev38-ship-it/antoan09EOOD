@@ -51,6 +51,14 @@ describe('parseRawSticker', () => {
     ]);
   });
 
+  it('познава марка точно и размито (OCR грешки)', () => {
+    expect(parseRawSticker('Пожарогасител с прах, Огнехром, 1 кг').brand).toBe('Огнехром');
+    expect(parseRawSticker('прах Огнюхром 1 кг').brand).toBe('Огнехром'); // 1 OCR грешка
+    const f = parseRawSticker('Пожарогасител с прах, Огнехром, 1 кг');
+    expect(f.type).toBe('powder_abc');
+    expect(f.capacityKg).toBe(1);
+  });
+
   it('празен текст → празно', () => {
     expect(parseRawSticker('')).toEqual({});
   });
