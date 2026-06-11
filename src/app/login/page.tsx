@@ -1,11 +1,7 @@
 'use client';
-import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
-function LoginForm() {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const next = sp.get('next') || '/';
+export default function LoginPage() {
   const [u, setU] = useState('');
   const [p, setP] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,9 +19,15 @@ function LoginForm() {
       });
       const j = await r.json();
       if (j.ok) {
-        const dest = next.startsWith('/login') || !next.startsWith('/') ? '/' : next;
-        router.replace(dest);
-        router.refresh();
+        let next = '/';
+        try {
+          const n = new URLSearchParams(window.location.search).get('next');
+          if (n && n.startsWith('/') && !n.startsWith('/login')) next = n;
+        } catch {
+          /* без next */
+        }
+        // Твърдо пренасочване → middleware преоценява със сесийната бисквитка.
+        window.location.href = next;
       } else {
         setErr(j.error || 'Неуспешен вход');
       }
@@ -69,13 +71,5 @@ function LoginForm() {
         </button>
       </form>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   );
 }
