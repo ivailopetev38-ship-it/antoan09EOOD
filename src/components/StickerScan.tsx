@@ -171,7 +171,6 @@ export default function StickerScan() {
 
   const matched = resp?.match ?? null;
   const f = resp?.fields;
-  const recognized = !!(f?.serial || f?.brand || f?.model || f?.type || f?.capacityKg || matched);
   const lowConfidence = typeof resp?.confidence === 'number' && resp.confidence > 0 && resp.confidence < 0.5;
   const picked = sites.find((s) => s.id === pickedSite) ?? null;
   const owner = matched
@@ -270,23 +269,15 @@ export default function StickerScan() {
       {resp?.ok && f && (
         <div style={{ border: '1px solid var(--line2)', borderRadius: 14, padding: 16, marginTop: 16 }}>
           <div style={{ fontWeight: 700 }}>
-            {matched ? '✓ Разпознат гасител' : recognized ? 'Разпознат гасител' : '⚠ Стикерът не се разчете ясно'}
+            {matched ? '✓ Разпознат и намерен' : 'Разпознат гасител'}
             {resp.status && <span className={`chip ${chipClass(resp.status.level)}`} style={{ marginLeft: 10 }}>{resp.status.label}</span>}
           </div>
 
           {matched ? (
             <p className="hint" style={{ marginTop: 6 }}>✓ Намерен в базата · Клиент: <b>{matched.ownerName}</b> · Обект: {matched.siteName}</p>
-          ) : recognized ? (
-            <div style={{ marginTop: 10 }}>
-              <p className="hint" style={{ color: 'var(--soon)' }}>⚠ Непознат гасител (не е в базата). Избери обект, за да продължиш:</p>
-              <select value={pickedSite} onChange={(e) => setPickedSite(e.target.value)} style={fieldStyle}>
-                <option value="">— избери обект —</option>
-                {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
-              </select>
-            </div>
           ) : (
             <div style={{ marginTop: 10 }}>
-              <p className="hint" style={{ color: 'var(--over)' }}>⚠ Не разчетох стикера ясно. Снимай по-отблизо и на светло, или въведи данните ръчно по-долу и избери обект:</p>
+              <p className="hint" style={{ color: 'var(--soon)' }}>👇 Избери на кой обект е гасителят:</p>
               <select value={pickedSite} onChange={(e) => setPickedSite(e.target.value)} style={fieldStyle}>
                 <option value="">— избери обект —</option>
                 {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
@@ -294,8 +285,8 @@ export default function StickerScan() {
             </div>
           )}
 
-          {lowConfidence && recognized && (
-            <p className="hint" style={{ marginTop: 8, color: 'var(--soon)' }}>ℹ Ниска сигурност на разпознаване — провери внимателно полетата.</p>
+          {lowConfidence && (
+            <p className="hint" style={{ marginTop: 8, color: 'var(--soon)' }}>ℹ Снимката беше малко неясна — разпознах приблизително. Само провери полетата по-долу.</p>
           )}
 
           {resp.raw && (
