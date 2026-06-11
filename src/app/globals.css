@@ -198,6 +198,18 @@ a.ext:hover { border-color: var(--line2); background: var(--panel2); }
   .qr-label-txt, .qr-serial, .qr-meta, .qr-site-h, .qr-count { color: #000 !important; }
 }
 
+/* ---- login портал ---- */
+.login-wrap { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(1100px 560px at 50% -8%, #211425, var(--bg)); }
+.login-card { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--radius); padding: 32px 28px; box-shadow: 0 24px 70px rgba(0,0,0,.5); display: grid; gap: 14px; }
+.login-logo { font-size: 46px; text-align: center; line-height: 1; }
+.login-title { margin: 0; text-align: center; letter-spacing: .5px; font-size: 26px; }
+.login-sub { margin: 0 0 6px; text-align: center; color: var(--muted); font-size: 14px; }
+.login-label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.login-input { padding: 12px 14px; font-size: 16px; border-radius: 10px; border: 1px solid var(--line2); background: var(--panel2); color: var(--txt); }
+.login-input:focus { outline: none; border-color: var(--fire); }
+.login-btn { margin-top: 6px; padding: 13px; font-size: 16px; display: flex; justify-content: center; }
+.login-err { margin: 0; color: var(--over); font-size: 14px; text-align: center; }
+
 /* ---- scanner ---- */
 .scan-box { position: relative; max-width: 480px; }
 .scan-video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); background: #000; display: block; }
@@ -207,6 +219,7 @@ a.ext:hover { border-color: var(--line2); background: var(--panel2); }
 /* ghost nav link */
 .nav-link { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--txt); font-weight: 600; font-size: 13px; padding: 11px 15px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel); white-space: nowrap; }
 .nav-link:hover { background: var(--panel2); border-color: var(--faint); }
+button.nav-link { font-family: inherit; cursor: pointer; }
 
 /* ---- calendar ---- */
 .cal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }

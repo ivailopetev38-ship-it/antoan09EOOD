@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoutButton } from "@/components/LogoutButton";
 import { getOverview } from "@/lib/dashboard/queries";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export default async function Dashboard() {
           <Link href="/napomnyania" className="nav-link">🔔 Напомняния</Link>
           <Link href="/qr" className="nav-link">🏷️ QR етикети</Link>
           <Link href="/skan" className="nav-scan">📷 Сканирай</Link>
+          <LogoutButton />
           <div className="greet">
             <div className="hi">{greet(now.getHours())}, управител</div>
             <div className="date">{dateStr}</div>
