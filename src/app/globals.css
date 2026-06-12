@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --bg: #0b0c10;
   --panel: #14161d;
   --panel2: #191c24;
@@ -45,6 +46,20 @@ body::before {
 }
 
 .wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 24px 18px 72px; }
+
+/* ---- form база (мобилно-стабилна): 16px спира iOS auto-zoom при фокус ---- */
+input:not([type="file"]), select, textarea {
+  font: inherit;
+  font-size: 16px;
+  color: var(--txt);
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 11px 12px;
+  max-width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--fire); }
+input::placeholder, textarea::placeholder { color: var(--faint); }
 .display { font-family: var(--font-display), sans-serif; }
 .mono { font-family: var(--font-mono), monospace; }
 
@@ -106,7 +121,7 @@ body::before {
 .detail-head { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
 .detail-head h2 { font-family: var(--font-display), sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: 20px; margin: 0; }
 .detail-head .cl { color: var(--muted); font-size: 13px; margin-top: 5px; }
-.detail-head .totals { display: flex; gap: 22px; margin-top: 16px; }
+.detail-head .totals { display: flex; gap: 22px; margin-top: 16px; flex-wrap: wrap; row-gap: 12px; }
 .detail-head .totals div span { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; display: block; }
 .detail-head .totals div small { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
 
@@ -135,7 +150,7 @@ body::before {
 .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
 /* ---- nav / scan ---- */
-.top-right { display: flex; align-items: center; gap: 16px; }
+.top-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .nav-scan { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: #fff; font-weight: 700; font-size: 13px; padding: 11px 17px; border-radius: 12px; background: linear-gradient(145deg, var(--fire), var(--fire2)); box-shadow: 0 8px 22px -10px rgba(255, 77, 46, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25); white-space: nowrap; }
 .nav-scan:hover { filter: brightness(1.07); }
 
@@ -220,6 +235,34 @@ a.ext:hover { border-color: var(--line2); background: var(--panel2); }
 .nav-link { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--txt); font-weight: 600; font-size: 13px; padding: 11px 15px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel); white-space: nowrap; }
 .nav-link:hover { background: var(--panel2); border-color: var(--faint); }
 button.nav-link { font-family: inherit; cursor: pointer; }
+
+/* ---- мобилна стабилизация ---- */
+@media (max-width: 760px) {
+  /* iOS Safari чупи/забавя fixed фонове */
+  body { background-attachment: scroll; }
+
+  .wrap { padding: 16px 14px 64px; }
+
+  /* топбар: лого + поздрав отгоре, бутоните 2 на ред, едри за пръст */
+  .topbar { gap: 14px; }
+  .top-right { width: 100%; gap: 8px; }
+  .greet { order: -1; width: 100%; text-align: left; }
+  .top-right .nav-link, .top-right .nav-scan {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+    padding: 13px 10px;
+    font-size: 14px;
+  }
+
+  .kpi .num { font-size: 32px; }
+  .detail-head { padding: 16px; }
+  .detail-head .totals { gap: 16px; }
+
+  /* редовете на гасителите: статусът да не изблъсква името */
+  .ext { gap: 10px; padding: 12px; }
+  .ext .st { max-width: 42%; }
+  .ext .st .lab, .ext .st .due { white-space: normal; }
+}
 
 /* ---- calendar ---- */
 .cal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }

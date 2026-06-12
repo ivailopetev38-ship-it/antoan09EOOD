@@ -47,7 +47,7 @@ const BRANDS = ['Солти', 'Огнехром', 'Торнадо', 'Дрипа�
 const chipClass = (l?: string) => (l === 'overdue' ? 'over' : l ?? '');
 const bg = (iso: string) => iso.split('-').reverse().join('.');
 const today = () => new Date().toISOString().slice(0, 10);
-const fieldStyle: React.CSSProperties = { width: '100%', marginTop: 4, padding: 9, fontSize: 15 };
+const fieldStyle: React.CSSProperties = { width: '100%', marginTop: 4, fontSize: 16 };
 
 // Смалява снимката до ~1280px JPEG преди качване (по-бързо + избягва timeouts на голями файлове).
 async function loadImageDataUrl(file: File): Promise<string> {
@@ -304,23 +304,23 @@ export default function StickerScan() {
             </label>
             <label className="hint">Модел<input value={eModel} onChange={(e) => setEModel(e.target.value)} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1 }}>Тип
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип
                 <select value={eType} onChange={(e) => setEType(e.target.value)} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
               </label>
-              <label className="hint" style={{ flex: 1 }}>Капацитет (кг/л)
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Капацитет (кг/л)
                 <select value={eCap} onChange={(e) => setECap(e.target.value)} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1 }}>Сериен №<input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
-              <label className="hint" style={{ flex: 1 }}>Година<input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен №<input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Година<input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
             </div>
             <label className="hint">Вид дейност
               <select value={action} onChange={(e) => setAction(e.target.value)} style={fieldStyle}>{KIND_OPTS.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}</select>
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1 }}>Дата<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
-              <label className="hint" style={{ flex: 1 }}>Стикер №<input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="напр. 0615" /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="напр. 0615" /></label>
             </div>
             <label className="hint">Техник<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
             {needsAgent && <label className="hint">Гасително вещество<input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50" /></label>}
