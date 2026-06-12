@@ -32,6 +32,8 @@ export default async function Dashboard() {
           <Link href="/kalendar" className="nav-link">📅 Календар</Link>
           <Link href="/napomnyania" className="nav-link">🔔 Напомняния</Link>
           <Link href="/qr" className="nav-link">🏷️ QR етикети</Link>
+          <Link href="/obekti/nov" className="nav-link">🏢 Нов обект</Link>
+          <Link href="/admin/import" className="nav-link">📥 Импорт</Link>
           <Link href="/skan" className="nav-scan">📷 Сканирай</Link>
           <LogoutButton />
           <div className="greet">

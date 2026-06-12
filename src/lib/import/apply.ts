@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server';
+import { findOrCreateSite } from './site';
 import type { ParsedRow } from './types';
 
 export interface ApplySummary {
@@ -13,39 +14,19 @@ export async function applyImport(rows: ParsedRow[]): Promise<ApplySummary> {
   const db = createServiceClient();
   const summary: ApplySummary = { clients: 0, sites: 0, extinguishers: 0, events: 0 };
 
-  const clientIds = new Map<string, string>();
   const siteIds = new Map<string, string>();
   const brandIds = new Map<string, string>();
 
   for (const r of rows) {
-    // клиент (по име)
-    let clientId = clientIds.get(r.client);
-    if (!clientId) {
-      const { data: existing } = await db.from('clients').select('id').eq('name', r.client).maybeSingle();
-      if (existing?.id) {
-        clientId = existing.id;
-      } else {
-        const { data: ins } = await db.from('clients').insert({ name: r.client }).select('id').single();
-        clientId = ins!.id;
-        summary.clients++;
-      }
-      clientIds.set(r.client, clientId!);
-    }
-
-    // обект (по име + клиент)
-    const siteKey = `${clientId}|${r.site}`;
+    // клиент + обект (намери-или-създай, кеширано по обект — DRY с findOrCreateSite)
+    const siteKey = `${r.client}|${r.site}`;
     let siteId = siteIds.get(siteKey);
     if (!siteId) {
-      const { data: existing } = await db
-        .from('sites').select('id').eq('client_id', clientId!).eq('name', r.site).maybeSingle();
-      if (existing?.id) {
-        siteId = existing.id;
-      } else {
-        const { data: ins } = await db.from('sites').insert({ client_id: clientId, name: r.site }).select('id').single();
-        siteId = ins!.id;
-        summary.sites++;
-      }
-      siteIds.set(siteKey, siteId!);
+      const res = await findOrCreateSite(db, { clientName: r.client, siteName: r.site });
+      siteId = res.siteId;
+      if (res.createdClient) summary.clients++;
+      if (res.createdSite) summary.sites++;
+      siteIds.set(siteKey, siteId);
     }
 
     // марка (по име)
