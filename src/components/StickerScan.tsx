@@ -184,7 +184,7 @@ export default function StickerScan() {
     const typeLabel = TYPE_OPTS.find((t) => t.v === eType)?.l ?? '';
     const modelTxt = eModel || `${eBrand ? eBrand + ' ' : ''}${typeLabel} ${eCap} кг`.trim();
     return {
-      protocolNo: '', date: bg(date), city: 'Нова Загора',
+      protocolNo: '', date: bg(date), city: 'Нова Загора', siteId: owner?.siteId,
       ownerName: owner?.name ?? '', ownerAddress: owner?.address ?? '', ownerPhone: owner?.phone ?? '',
       lines: [{
         idx: 1,

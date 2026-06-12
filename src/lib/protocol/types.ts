@@ -18,5 +18,6 @@ export interface ProtocolData {
   ownerName: string;
   ownerAddress: string;
   ownerPhone: string;
+  siteId?: string;           // обект (за записване в дневника + пореден номер)
   lines: ProtocolLineData[];
 }
