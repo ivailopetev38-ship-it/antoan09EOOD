@@ -45,7 +45,7 @@ export default function ImportPage() {
         onChange={(e) => setText(e.target.value)}
         placeholder={PLACEHOLDER}
         rows={12}
-        style={{ width: '100%', fontFamily: 'monospace', fontSize: 13, padding: 12 }}
+        style={{ width: '100%', fontFamily: 'monospace', fontSize: 16, padding: 12 }}
       />
       <button
         onClick={submit}
