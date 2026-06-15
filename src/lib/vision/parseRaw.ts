@@ -2,8 +2,8 @@ import { normalizeType, parseFlexDate } from '@/lib/import/normalize';
 import type { StickerFields } from './types';
 
 const KNOWN_BRANDS = [
-  'Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total',
-  'Ceasefire', 'Minimax', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor',
+  'Спарк', 'Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total',
+  'Minimax', 'Ceasefire', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor',
 ];
 
 const DATE = '(\\d{1,2}\\.\\d{1,2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})';

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { computeExtinguisherStatus } from '@/lib/regulatory/engine';
+import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
 import { nextProtocolNumber } from './protocolNumber';
 import { generateProtocolDocx } from './generateDocx';
@@ -84,8 +85,8 @@ export async function buildProtocol(opts: { siteId?: string; extinguisherId?: st
       line: {
         idx: built.length + 1,
         markings: `${e.model ?? ''} № ${e.serial_number ?? ''} / ${e.manufacture_year}`.trim(),
-        category: e.category ?? '',
-        mass: e.mass_kg != null ? Number(e.mass_kg).toFixed(3).replace('.', ',') : '',
+        category: e.category ?? deriveCategory(e.type as ExtinguisherType),
+        mass: e.gross_mass_kg != null ? Number(e.gross_mass_kg).toFixed(3).replace('.', ',') : '',
         agent: AGENT_LABEL[e.type as ExtinguisherType] ?? '',
         agentTradeName: '',
         serviceKind: ACTION_LABEL[status.suggestedAction] ?? '',

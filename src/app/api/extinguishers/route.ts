@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     serialNumber?: string;
     manufactureYear?: number;
     massKg?: number;
+    grossMassKg?: number;
     stampYear?: number;
     category?: string;
   };
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       serial_number: b.serialNumber,
       manufacture_year: b.manufactureYear,
       mass_kg: b.massKg ?? null,
+      gross_mass_kg: b.grossMassKg ?? null,
       stamp_year: b.stampYear ?? null,
       category: b.category || null,
     })

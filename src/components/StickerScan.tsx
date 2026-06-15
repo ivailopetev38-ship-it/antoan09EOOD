@@ -1,6 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { deriveCategory } from '@/lib/regulatory/category';
+import type { ExtinguisherType } from '@/lib/regulatory/types';
 
 interface Fields {
   brand: string | null; model: string | null; serial: string | null; year: number | null;
@@ -42,14 +44,15 @@ const TYPE_OPTS = [
   { v: 'water', l: 'Воден' }, { v: 'foam', l: 'Водопенен' }, { v: 'co2', l: 'CO₂' },
 ];
 const CAP_OPTS = ['1', '2', '3', '4', '5', '6', '9', '12', '25', '50'];
-const BRANDS = ['Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total', 'Ceasefire', 'Minimax', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor'];
+const CAT_OPTS = ['К1', 'К2', 'К3', 'К4', 'К5'];
+const BRANDS = ['Спарк', 'Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total', 'Minimax', 'Ceasefire', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor'];
 
 const chipClass = (l?: string) => (l === 'overdue' ? 'over' : l ?? '');
 const bg = (iso: string) => iso.split('-').reverse().join('.');
 const today = () => new Date().toISOString().slice(0, 10);
 const fieldStyle: React.CSSProperties = { width: '100%', marginTop: 4, fontSize: 16 };
 
-// Смалява снимката до ~1280px JPEG преди качване (по-бързо + избягва timeouts на голями файлове).
+// Смалява снимката до ~1600px JPEG преди качване (по-бързо + избягва timeouts на голями файлове).
 async function loadImageDataUrl(file: File): Promise<string> {
   try {
     return await new Promise<string>((resolve, reject) => {
@@ -91,18 +94,26 @@ export default function StickerScan() {
   const [pickedSite, setPickedSite] = useState('');
   const [added, setAdded] = useState<string | null>(null);
 
+  // Гасител (графи на протокола) — всичко редактируемо, AI пред-попълва.
   const [eBrand, setEBrand] = useState('');
   const [eModel, setEModel] = useState('');
   const [eSerial, setESerial] = useState('');
   const [eYear, setEYear] = useState('');
   const [eType, setEType] = useState('powder_abc');
   const [eCap, setECap] = useState('');
+  const [eCategory, setECategory] = useState('К2');     // графа 3
+  const [eTotalMass, setETotalMass] = useState('');     // графа 4 — обща (бруто) маса
   const [action, setAction] = useState('TO');
   const [date, setDate] = useState(today());
   const [tech, setTech] = useState('');
   const [sticker, setSticker] = useState('');
   const [agentTrade, setAgentTrade] = useState('');
   const [notes, setNotes] = useState('');
+  // Собственик / получател — редактируем (заглавна част)
+  const [oName, setOName] = useState('');
+  const [oAddr, setOAddr] = useState('');
+  const [oPhone, setOPhone] = useState('');
+  const [oSiteId, setOSiteId] = useState<string | undefined>(undefined);
   const [gen, setGen] = useState(false);
   const [mail, setMail] = useState<string | null>(null);
 
@@ -138,6 +149,17 @@ export default function StickerScan() {
     fetch('/api/sites').then((r) => r.json()).then((j) => setSites(j.sites ?? [])).catch(() => {});
   }, []);
 
+  function applyType(t: string) {
+    setEType(t);
+    setECategory(deriveCategory(t as ExtinguisherType)); // авто-категория по типа (редактируема след това)
+  }
+  function pickSite(id: string) {
+    setPickedSite(id);
+    const s = sites.find((x) => x.id === id);
+    setOSiteId(id || undefined);
+    if (s) { setOName(s.ownerName); setOAddr(s.ownerAddress); setOPhone(s.ownerPhone); }
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,10 +180,18 @@ export default function StickerScan() {
       setEModel((mm?.model ?? ff?.model) ?? '');
       setESerial((mm?.serial ?? ff?.serial) ?? '');
       setEYear(String(mm?.year ?? ff?.year ?? ''));
-      setEType(String(mm?.type ?? ff?.type ?? 'powder_abc'));
+      const t = String(mm?.type ?? ff?.type ?? 'powder_abc');
+      setEType(t);
+      setECategory(mm?.category || deriveCategory(t as ExtinguisherType));
       setECap(String(mm?.mass ?? ff?.capacityKg ?? ''));
+      setETotalMass('');
       if (j.status?.dueAction) setAction(j.status.dueAction);
       if (ff?.agent) setAgentTrade(ff.agent);
+      // Собственик — от съвпадението (ако има), иначе празно за ръчно/избор
+      setOSiteId(mm?.siteId);
+      setOName(mm?.ownerName ?? '');
+      setOAddr(mm?.ownerAddress ?? '');
+      setOPhone(mm?.ownerPhone ?? '');
     } catch {
       setResp({ ok: false, error: 'Грешка при заявката' });
     } finally {
@@ -172,25 +202,20 @@ export default function StickerScan() {
   const matched = resp?.match ?? null;
   const f = resp?.fields;
   const lowConfidence = typeof resp?.confidence === 'number' && resp.confidence > 0 && resp.confidence < 0.5;
-  const picked = sites.find((s) => s.id === pickedSite) ?? null;
-  const owner = matched
-    ? { name: matched.ownerName, address: matched.ownerAddress, phone: matched.ownerPhone, siteId: matched.siteId }
-    : picked
-    ? { name: picked.ownerName, address: picked.ownerAddress, phone: picked.ownerPhone, siteId: picked.id }
-    : null;
+  const canGenerate = !!oName.trim(); // достатъчно е да има собственик (обектът е по избор)
 
   function buildProtocol() {
-    const capNum = Number((eCap || '0').replace(',', '.'));
+    const massNum = Number((eTotalMass || '0').replace(',', '.'));
     const typeLabel = TYPE_OPTS.find((t) => t.v === eType)?.l ?? '';
     const modelTxt = eModel || `${eBrand ? eBrand + ' ' : ''}${typeLabel} ${eCap} кг`.trim();
     return {
-      protocolNo: '', date: bg(date), city: 'Нова Загора', siteId: owner?.siteId,
-      ownerName: owner?.name ?? '', ownerAddress: owner?.address ?? '', ownerPhone: owner?.phone ?? '',
+      protocolNo: '', date: bg(date), city: 'Нова Загора', siteId: oSiteId,
+      ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone,
       lines: [{
         idx: 1,
         markings: `${modelTxt} № ${eSerial} / ${eYear}`.trim(),
-        category: matched?.category ?? '',
-        mass: capNum ? capNum.toFixed(3).replace('.', ',') : '',
+        category: eCategory,
+        mass: massNum ? massNum.toFixed(3).replace('.', ',') : '',
         agent: AGENT_LABEL[eType] ?? '',
         agentTradeName: needsAgent ? agentTrade : '',
         serviceKind: KIND_LABEL[action] ?? action,
@@ -200,7 +225,7 @@ export default function StickerScan() {
   }
 
   async function generateWord() {
-    if (!owner) { setMail('Първо избери обект.'); return; }
+    if (!canGenerate) { setMail('Попълни поне собственик (или избери обект).'); return; }
     setGen(true); setMail(null);
     try {
       const r = await fetch('/api/protocols/custom', {
@@ -217,7 +242,7 @@ export default function StickerScan() {
   }
 
   async function sendEmail() {
-    if (!owner) { setMail('Първо избери обект.'); return; }
+    if (!canGenerate) { setMail('Попълни поне собственик (или избери обект).'); return; }
     setGen(true); setMail(null);
     try {
       const r = await fetch('/api/protocols/email', {
@@ -237,6 +262,7 @@ export default function StickerScan() {
         body: JSON.stringify({
           siteId: pickedSite, type: eType, model: eModel, serialNumber: eSerial,
           manufactureYear: Number(eYear), massKg: eCap ? Number(eCap.replace(',', '.')) : undefined,
+          grossMassKg: eTotalMass ? Number(eTotalMass.replace(',', '.')) : undefined, category: eCategory || undefined,
         }),
       });
       const j = await r.json();
@@ -277,8 +303,8 @@ export default function StickerScan() {
             <p className="hint" style={{ marginTop: 6 }}>✓ Намерен в базата · Клиент: <b>{matched.ownerName}</b> · Обект: {matched.siteName}</p>
           ) : (
             <div style={{ marginTop: 10 }}>
-              <p className="hint" style={{ color: 'var(--soon)' }}>👇 Избери на кой обект е гасителят:</p>
-              <select value={pickedSite} onChange={(e) => setPickedSite(e.target.value)} style={fieldStyle}>
+              <p className="hint" style={{ color: 'var(--soon)' }}>👇 Избери обект (или попълни собственика ръчно по-долу):</p>
+              <select value={pickedSite} onChange={(e) => pickSite(e.target.value)} style={fieldStyle}>
                 <option value="">— избери обект —</option>
                 {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
               </select>
@@ -296,7 +322,7 @@ export default function StickerScan() {
             </details>
           )}
 
-          <p className="hint" style={{ margin: '12px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай от менютата:</p>
+          <p className="hint" style={{ margin: '14px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай всичко (всяка графа е редактируема):</p>
           <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
             <label className="hint">Марка
               <input list="brand-list" value={eBrand} onChange={(e) => setEBrand(e.target.value)} style={fieldStyle} placeholder="избери или въведи" />
@@ -305,14 +331,22 @@ export default function StickerScan() {
             <label className="hint">Модел<input value={eModel} onChange={(e) => setEModel(e.target.value)} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
             <div style={{ display: 'flex', gap: 10 }}>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип
-                <select value={eType} onChange={(e) => setEType(e.target.value)} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
+                <select value={eType} onChange={(e) => applyType(e.target.value)} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
               </label>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Капацитет (кг/л)
                 <select value={eCap} onChange={(e) => setECap(e.target.value)} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен №<input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Категория
+                <select value={eCategory} onChange={(e) => setECategory(e.target.value)} style={fieldStyle}>{CAT_OPTS.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              </label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Обща маса (кг)
+                <input value={eTotalMass} onChange={(e) => setETotalMass(e.target.value)} style={fieldStyle} inputMode="decimal" placeholder="напр. 1,600" />
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен № (на корпуса)<input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Година<input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
             </div>
             <label className="hint">Вид дейност
@@ -320,10 +354,18 @@ export default function StickerScan() {
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="напр. 0615" /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="номер на стикера" /></label>
             </div>
-            <label className="hint">Техник<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
-            {needsAgent && <label className="hint">Гасително вещество<input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50" /></label>}
+            <label className="hint">Техник (извършил обслужването)<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
+            {needsAgent && <label className="hint">Търговско наименование (продукт за презареждане)<input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50 / пенообразувател" /></label>}
+
+            <p className="hint" style={{ margin: '6px 0 0', color: 'var(--soon)' }}>На кого се предава (собственик):</p>
+            <label className="hint">Собственик / клиент<input value={oName} onChange={(e) => setOName(e.target.value)} style={fieldStyle} placeholder="напр. ЕТ Иванов" /></label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <label className="hint" style={{ flex: 2, minWidth: 0 }}>Адрес<input value={oAddr} onChange={(e) => setOAddr(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Телефон<input value={oPhone} onChange={(e) => setOPhone(e.target.value)} style={fieldStyle} inputMode="tel" /></label>
+            </div>
+
             <label className="hint">Забележки{voiceSupported && ' (може и гласово)'}
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 4 }}>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...fieldStyle, marginTop: 0, flex: 1, resize: 'vertical' }} placeholder="по избор — напиши или продиктувай" />
@@ -344,8 +386,8 @@ export default function StickerScan() {
           </div>
 
           <div className="btn-row" style={{ marginTop: 16 }}>
-            <button className="btn btn-fire" style={btnBig} disabled={gen || !owner} onClick={generateWord}>📄 Генерирай Word</button>
-            <button className="btn" style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen || !owner} onClick={sendEmail}>✉ Изпрати на имейл</button>
+            <button className="btn btn-fire" style={btnBig} disabled={gen || !canGenerate} onClick={generateWord}>📄 Генерирай Word</button>
+            <button className="btn" style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen || !canGenerate} onClick={sendEmail}>✉ Изпрати на имейл</button>
           </div>
           {!matched && (
             <div style={{ marginTop: 10 }}>

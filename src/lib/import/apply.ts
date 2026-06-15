@@ -57,6 +57,8 @@ export async function applyImport(rows: ParsedRow[]): Promise<ApplySummary> {
       serial_number: r.serial,
       manufacture_year: r.year,
       mass_kg: r.massKg,
+      gross_mass_kg: r.grossMassKg,
+      category: r.category,
       stamp_year: r.stampYear,
     };
     if (extId) {
