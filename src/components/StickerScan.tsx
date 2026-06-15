@@ -155,7 +155,7 @@ export default function StickerScan() {
     try { rec.start(); } catch { setListening(false); }
   }
 
-  const needsAgent = action === 'recharge';
+  const needsAgent = action === 'recharge' || action === 'HI'; // графа 6: при П или ХИ
 
   useEffect(() => {
     fetch('/api/sites').then((r) => r.json()).then((j) => setSites(j.sites ?? [])).catch(() => {});
@@ -369,7 +369,7 @@ export default function StickerScan() {
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<Gr n={11} title="Номер на стикера" /><input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="номер на стикера" /></label>
             </div>
             <label className="hint">Техник (извършил обслужването)<Gr n={9} title="Име на лицето, извършило обслужването (графа 10 = подпис, на ръка)" /><input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
-            {needsAgent && <label className="hint">Търговско наименование (продукт за презареждане)<Gr n={6} title="Търговско наименование на веществото (при П или ХИ)" /><input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50 / пенообразувател" /></label>}
+            {needsAgent && <label className="hint">Търговско наименование (при презареждане или ХИ)<Gr n={6} title="Търговско наименование на пожарогасителното вещество (при П или ХИ)" /><input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50 / пенообразувател" /></label>}
 
             <p className="hint" style={{ margin: '6px 0 0', color: 'var(--soon)' }}>На кого се предава (собственик) — попълва се <b>под таблицата</b> на протокола:</p>
             <label className="hint">Собственик / клиент<input value={oName} onChange={(e) => setOName(e.target.value)} style={fieldStyle} placeholder="напр. ЕТ Иванов" /></label>
