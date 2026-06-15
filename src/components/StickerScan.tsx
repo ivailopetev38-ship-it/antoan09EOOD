@@ -341,7 +341,7 @@ export default function StickerScan() {
               <datalist id="brand-list">{BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
             </label>
             <label className="hint">Модел<Gr n={2} title="Ид. маркировка (марка, модел, сериен №, година)" /><input value={eModel} onChange={(e) => setEModel(e.target.value)} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="frow">
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип<Gr n={5} title="Пожарогасително вещество (вода, прах, CO₂ или др.)" />
                 <select value={eType} onChange={(e) => applyType(e.target.value)} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
               </label>
@@ -349,7 +349,7 @@ export default function StickerScan() {
                 <select value={eCap} onChange={(e) => setECap(e.target.value)} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="frow">
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Категория<Gr n={3} title="Категория на пожарогасителя (БДС ISO 11602-2:2002)" />
                 <select value={eCategory} onChange={(e) => setECategory(e.target.value)} style={fieldStyle}>{CAT_OPTS.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
@@ -357,14 +357,14 @@ export default function StickerScan() {
                 <input value={eTotalMass} onChange={(e) => setETotalMass(e.target.value)} style={fieldStyle} inputMode="decimal" placeholder="напр. 1,600" />
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="frow">
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен № (на корпуса)<Gr n={2} title="Ид. маркировка (сериен номер)" /><input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Година<Gr n={2} title="Ид. маркировка (година на производство)" /><input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
             </div>
             <label className="hint">Вид дейност<Gr n={7} title="Вид на извършеното обслужване (ТО, П или ХИ)" />
               <select value={action} onChange={(e) => setAction(e.target.value)} style={fieldStyle}>{KIND_OPTS.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}</select>
             </label>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="frow">
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<Gr n={8} title="Дата на извършеното обслужване" /><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<Gr n={11} title="Номер на стикера" /><input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="номер на стикера" /></label>
             </div>
@@ -373,7 +373,7 @@ export default function StickerScan() {
 
             <p className="hint" style={{ margin: '6px 0 0', color: 'var(--soon)' }}>На кого се предава (собственик) — попълва се <b>под таблицата</b> на протокола:</p>
             <label className="hint">Собственик / клиент<input value={oName} onChange={(e) => setOName(e.target.value)} style={fieldStyle} placeholder="напр. ЕТ Иванов" /></label>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="frow">
               <label className="hint" style={{ flex: 2, minWidth: 0 }}>Адрес<input value={oAddr} onChange={(e) => setOAddr(e.target.value)} style={fieldStyle} /></label>
               <label className="hint" style={{ flex: 1, minWidth: 0 }}>Телефон<input value={oPhone} onChange={(e) => setOPhone(e.target.value)} style={fieldStyle} inputMode="tel" /></label>
             </div>

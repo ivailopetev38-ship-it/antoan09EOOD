@@ -231,6 +231,10 @@ a.ext:hover { border-color: var(--line2); background: var(--panel2); }
 .scan-frame { position: absolute; top: 0; left: 0; width: 100%; aspect-ratio: 1 / 1; border-radius: var(--radius); pointer-events: none; box-shadow: inset 0 0 0 3px rgba(255, 77, 46, 0.55); }
 .scan-hint { margin-top: 12px; }
 
+/* редове с по 2 полета във формата — изправят се в една колона на телефон */
+.frow { display: flex; gap: 10px; }
+@media (max-width: 560px) { .frow { flex-direction: column; gap: 12px; } }
+
 /* ghost nav link */
 .nav-link { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--txt); font-weight: 600; font-size: 13px; padding: 11px 15px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel); white-space: nowrap; }
 .nav-link:hover { background: var(--panel2); border-color: var(--faint); }
