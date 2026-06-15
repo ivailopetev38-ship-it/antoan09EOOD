@@ -52,6 +52,18 @@ const bg = (iso: string) => iso.split('-').reverse().join('.');
 const today = () => new Date().toISOString().slice(0, 10);
 const fieldStyle: React.CSSProperties = { width: '100%', marginTop: 4, fontSize: 16 };
 
+// Малък бадж, който показва коя графа от Приложение № 9 попълва даденото поле.
+function Gr({ n, title }: { n: number; title: string }) {
+  return (
+    <span
+      title={`Графа ${n}: ${title}`}
+      style={{ fontSize: 11, fontWeight: 700, color: 'var(--soon)', border: '1px solid var(--line2)', borderRadius: 6, padding: '0 6px', marginLeft: 6, whiteSpace: 'nowrap' }}
+    >
+      графа {n}
+    </span>
+  );
+}
+
 // Смалява снимката до ~1600px JPEG преди качване (по-бързо + избягва timeouts на голями файлове).
 async function loadImageDataUrl(file: File): Promise<string> {
   try {
@@ -322,44 +334,44 @@ export default function StickerScan() {
             </details>
           )}
 
-          <p className="hint" style={{ margin: '14px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай всичко (всяка графа е редактируема):</p>
+          <p className="hint" style={{ margin: '14px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай всичко (всяка графа е редактируема). До всяко поле пише коя <b>графа</b> от протокола (Приложение № 9) попълва:</p>
           <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-            <label className="hint">Марка
+            <label className="hint">Марка<Gr n={2} title="Ид. маркировка (марка, модел, сериен №, година)" />
               <input list="brand-list" value={eBrand} onChange={(e) => setEBrand(e.target.value)} style={fieldStyle} placeholder="избери или въведи" />
               <datalist id="brand-list">{BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
             </label>
-            <label className="hint">Модел<input value={eModel} onChange={(e) => setEModel(e.target.value)} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
+            <label className="hint">Модел<Gr n={2} title="Ид. маркировка (марка, модел, сериен №, година)" /><input value={eModel} onChange={(e) => setEModel(e.target.value)} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип<Gr n={5} title="Пожарогасително вещество (вода, прах, CO₂ или др.)" />
                 <select value={eType} onChange={(e) => applyType(e.target.value)} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
               </label>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Капацитет (кг/л)
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Капацитет (кг/л)<Gr n={2} title="Влиза в описанието/модела (маркировка)" />
                 <select value={eCap} onChange={(e) => setECap(e.target.value)} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Категория
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Категория<Gr n={3} title="Категория на пожарогасителя (БДС ISO 11602-2:2002)" />
                 <select value={eCategory} onChange={(e) => setECategory(e.target.value)} style={fieldStyle}>{CAT_OPTS.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               </label>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Обща маса (кг)
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Обща маса (кг)<Gr n={4} title="Маса на заредения пожарогасител, кг" />
                 <input value={eTotalMass} onChange={(e) => setETotalMass(e.target.value)} style={fieldStyle} inputMode="decimal" placeholder="напр. 1,600" />
               </label>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен № (на корпуса)<input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Година<input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Сериен № (на корпуса)<Gr n={2} title="Ид. маркировка (сериен номер)" /><input value={eSerial} onChange={(e) => setESerial(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Година<Gr n={2} title="Ид. маркировка (година на производство)" /><input type="number" value={eYear} onChange={(e) => setEYear(e.target.value)} style={fieldStyle} /></label>
             </div>
-            <label className="hint">Вид дейност
+            <label className="hint">Вид дейност<Gr n={7} title="Вид на извършеното обслужване (ТО, П или ХИ)" />
               <select value={action} onChange={(e) => setAction(e.target.value)} style={fieldStyle}>{KIND_OPTS.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}</select>
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
-              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="номер на стикера" /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<Gr n={8} title="Дата на извършеното обслужване" /><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
+              <label className="hint" style={{ flex: 1, minWidth: 0 }}>Стикер №<Gr n={11} title="Номер на стикера" /><input value={sticker} onChange={(e) => setSticker(e.target.value)} style={fieldStyle} placeholder="номер на стикера" /></label>
             </div>
-            <label className="hint">Техник (извършил обслужването)<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
-            {needsAgent && <label className="hint">Търговско наименование (продукт за презареждане)<input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50 / пенообразувател" /></label>}
+            <label className="hint">Техник (извършил обслужването)<Gr n={9} title="Име на лицето, извършило обслужването (графа 10 = подпис, на ръка)" /><input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
+            {needsAgent && <label className="hint">Търговско наименование (продукт за презареждане)<Gr n={6} title="Търговско наименование на веществото (при П или ХИ)" /><input value={agentTrade} onChange={(e) => setAgentTrade(e.target.value)} style={fieldStyle} placeholder="напр. Кобра ABC 50 / пенообразувател" /></label>}
 
-            <p className="hint" style={{ margin: '6px 0 0', color: 'var(--soon)' }}>На кого се предава (собственик):</p>
+            <p className="hint" style={{ margin: '6px 0 0', color: 'var(--soon)' }}>На кого се предава (собственик) — попълва се <b>под таблицата</b> на протокола:</p>
             <label className="hint">Собственик / клиент<input value={oName} onChange={(e) => setOName(e.target.value)} style={fieldStyle} placeholder="напр. ЕТ Иванов" /></label>
             <div style={{ display: 'flex', gap: 10 }}>
               <label className="hint" style={{ flex: 2, minWidth: 0 }}>Адрес<input value={oAddr} onChange={(e) => setOAddr(e.target.value)} style={fieldStyle} /></label>
