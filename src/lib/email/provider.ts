@@ -5,6 +5,7 @@ export interface EmailAttachment {
 
 export interface EmailMessage {
   to: string;
+  bcc?: string;
   subject: string;
   html: string;
   text?: string;
@@ -31,6 +32,7 @@ function resendProvider(apiKey: string, from: string): EmailProvider {
         body: JSON.stringify({
           from,
           to: [msg.to],
+          ...(msg.bcc ? { bcc: [msg.bcc] } : {}),
           subject: msg.subject,
           html: msg.html,
           text: msg.text,

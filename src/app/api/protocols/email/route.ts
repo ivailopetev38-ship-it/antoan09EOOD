@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   }
   const data = body.protocol;
   const to = (body.to || process.env.EMAIL_TO || '').trim();
+  const bcc = (process.env.EMAIL_BCC || '').trim() || undefined;
   if (!data || !Array.isArray(data.lines) || data.lines.length === 0) {
     return NextResponse.json({ ok: false, error: 'Няма редове за протокол' }, { status: 400 });
   }
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
     `<p>Поздрави,<br/>АНТОАН-09</p>`;
   const r = await getEmailProvider().send({
     to,
+    bcc,
     subject: `Протокол № ${protocolNo} · ${data.ownerName}`,
     html,
     attachments: [{ filename, content: buffer.toString('base64') }],
