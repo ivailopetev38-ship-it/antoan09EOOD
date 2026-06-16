@@ -13,6 +13,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Невалиден JSON' }, { status: 400 });
   }
   const data = body.protocol;
+  // Получател = EMAIL_TO (клиентът). EMAIL_BCC (скрито копие) е по избор и в момента
+  // НЕ е зададено → протоколът се праща САМО към клиента.
   const to = (body.to || process.env.EMAIL_TO || '').trim();
   const bcc = (process.env.EMAIL_BCC || '').trim() || undefined;
   if (!data || !Array.isArray(data.lines) || data.lines.length === 0) {
