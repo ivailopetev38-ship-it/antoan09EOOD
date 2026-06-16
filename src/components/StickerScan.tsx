@@ -117,6 +117,7 @@ export default function StickerScan() {
   const [eTotalMass, setETotalMass] = useState('');     // графа 4 — обща (бруто) маса
   const [action, setAction] = useState('TO');
   const [date, setDate] = useState(today());
+  const [eProtocolNo, setEProtocolNo] = useState('');   // номер на протокол (примерен, редактируем)
   const [tech, setTech] = useState('');
   const [sticker, setSticker] = useState('');
   const [agentTrade, setAgentTrade] = useState('');
@@ -159,6 +160,7 @@ export default function StickerScan() {
 
   useEffect(() => {
     fetch('/api/sites').then((r) => r.json()).then((j) => setSites(j.sites ?? [])).catch(() => {});
+    fetch('/api/protocols/next-number').then((r) => r.json()).then((j) => { if (j?.number) setEProtocolNo(j.number); }).catch(() => {});
   }, []);
 
   function applyType(t: string) {
@@ -221,7 +223,7 @@ export default function StickerScan() {
     const typeLabel = TYPE_OPTS.find((t) => t.v === eType)?.l ?? '';
     const modelTxt = eModel || `${eBrand ? eBrand + ' ' : ''}${typeLabel} ${eCap} кг`.trim();
     return {
-      protocolNo: '', date: bg(date), city: 'Нова Загора', siteId: oSiteId,
+      protocolNo: eProtocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId,
       ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone,
       lines: [{
         idx: 1,
@@ -336,6 +338,9 @@ export default function StickerScan() {
 
           <p className="hint" style={{ margin: '14px 0 0', color: 'var(--soon)' }}>✎ Провери и коригирай всичко (всяка графа е редактируема). До всяко поле пише коя <b>графа</b> от протокола (Приложение № 9) попълва:</p>
           <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+            <label className="hint">Номер на протокол <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(примерен — коригирай при нужда)</span>
+              <input value={eProtocolNo} onChange={(e) => setEProtocolNo(e.target.value)} style={fieldStyle} placeholder="напр. 6/2026" />
+            </label>
             <label className="hint">Марка<Gr n={2} title="Ид. маркировка (марка, модел, сериен №, година)" />
               <input list="brand-list" value={eBrand} onChange={(e) => setEBrand(e.target.value)} style={fieldStyle} placeholder="избери или въведи" />
               <datalist id="brand-list">{BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
