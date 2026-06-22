@@ -10,19 +10,23 @@ import type { RecognizeResult } from '@/lib/vision/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  let body: { imageBase64?: string };
+  let body: { imageBase64?: string; imageBase64List?: string[] };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, error: 'Невалиден JSON' }, { status: 400 });
   }
-  if (!body.imageBase64) {
+  const images = (body.imageBase64List?.length ? body.imageBase64List : body.imageBase64 ? [body.imageBase64] : [])
+    .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    .slice(0, 4); // до 4 снимки на гасител
+  if (!images.length) {
     return NextResponse.json({ ok: false, error: 'Липсва снимка' }, { status: 400 });
   }
 
-  let rec: RecognizeResult;
+  // Разпознава всяка снимка през Hermes (паралелно), после слива най-доброто по увереност.
+  let recs: RecognizeResult[];
   try {
-    rec = await getVisionProvider().recognize(body.imageBase64);
+    recs = await Promise.all(images.map((img) => getVisionProvider().recognize(img)));
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: `Грешка при разпознаване: ${(e as Error).message}` },
@@ -31,8 +35,14 @@ export async function POST(req: Request) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  // Предпочита чистия локален парсер на суровия текст; полетата от Hermes допълват липсите.
-  const f = mergeStickerFields(parseRawSticker(rec.raw ?? ''), rec.fields);
+  // За всяка снимка: чист локален парсер + полета от Hermes; после слива всички (по-високата увереност води).
+  const perImage = recs
+    .map((r) => ({ f: mergeStickerFields(parseRawSticker(r.raw ?? ''), r.fields), confidence: r.confidence, raw: r.raw ?? '', demo: r.demo }))
+    .sort((a, b) => b.confidence - a.confidence);
+  const f = perImage.reduce((acc, p) => mergeStickerFields(acc, p.f), perImage[0].f);
+  const confidence = Math.max(...perImage.map((p) => p.confidence));
+  const demo = perImage.every((p) => p.demo);
+  const raw = perImage.map((p) => p.raw).filter(Boolean).join('\n---\n');
 
   // Намери гасителя по сериен № (за реален статус + попълване на протокола)
   let match:
@@ -119,5 +129,5 @@ export async function POST(req: Request) {
   const inp = stickerToEngineInput(f, today);
   const status = inp ? deriveStatus(computeExtinguisherStatus(inp), today) : null;
 
-  return NextResponse.json({ ok: true, demo: rec.demo, confidence: rec.confidence, fields: f, match, status, raw: rec.raw ?? null });
+  return NextResponse.json({ ok: true, demo, confidence, fields: f, match, status, raw: raw || null });
 }
