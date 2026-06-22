@@ -9,13 +9,13 @@ export async function GET() {
   const db = createServiceClient();
   const { data } = await db
     .from('sites')
-    .select('id, name, address, clients(name, address, phone)')
+    .select('id, name, address, clients(name, address, phone, email)')
     .order('name');
   const sites = ((data ?? []) as Array<{
     id: string;
     name: string;
     address: string | null;
-    clients: { name?: string; address?: string; phone?: string } | { name?: string; address?: string; phone?: string }[] | null;
+    clients: { name?: string; address?: string; phone?: string; email?: string } | { name?: string; address?: string; phone?: string; email?: string }[] | null;
   }>).map((s) => {
     const cl = Array.isArray(s.clients) ? s.clients[0] : s.clients;
     return {
@@ -24,6 +24,7 @@ export async function GET() {
       ownerName: cl?.name ?? '',
       ownerAddress: cl?.address ?? s.address ?? '',
       ownerPhone: cl?.phone ?? '',
+      ownerEmail: cl?.email ?? '',
     };
   });
   return NextResponse.json({ sites });
@@ -31,7 +32,7 @@ export async function GET() {
 
 // Създава нов обект (и клиент, ако е нов). Идемпотентно по име.
 export async function POST(req: Request) {
-  let b: { clientName?: string; siteName?: string; address?: string; phone?: string };
+  let b: { clientName?: string; siteName?: string; address?: string; phone?: string; email?: string };
   try {
     b = await req.json();
   } catch {
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
       siteName: b.siteName,
       address: b.address,
       phone: b.phone,
+      email: b.email,
     });
     return NextResponse.json({ ok: true, siteId: r.siteId, createdSite: r.createdSite });
   } catch (e) {

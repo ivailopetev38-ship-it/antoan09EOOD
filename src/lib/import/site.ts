@@ -5,6 +5,7 @@ export interface FindOrCreateSiteInput {
   siteName: string;
   address?: string | null;
   phone?: string | null;
+  email?: string | null;
 }
 export interface FindOrCreateSiteResult {
   siteId: string;
@@ -22,14 +23,17 @@ export async function findOrCreateSite(
   if (!clientName || !siteName) throw new Error('Липсва име на клиент или обект');
   const address = input.address?.trim() || null;
   const phone = input.phone?.trim() || null;
+  const email = input.email?.trim() || null;
 
   let createdClient = false;
   const { data: c } = await db.from('clients').select('id').eq('name', clientName).maybeSingle();
   let clientId = (c as { id?: string } | null)?.id;
   if (!clientId) {
-    const ins = await db.from('clients').insert({ name: clientName, address, phone }).select('id').single();
+    const ins = await db.from('clients').insert({ name: clientName, address, phone, email }).select('id').single();
     clientId = (ins.data as { id: string }).id;
     createdClient = true;
+  } else if (email) {
+    await db.from('clients').update({ email }).eq('id', clientId);
   }
 
   let createdSite = false;

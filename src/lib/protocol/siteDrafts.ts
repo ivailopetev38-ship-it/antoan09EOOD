@@ -11,6 +11,7 @@ export interface SiteDrafts {
   ownerName: string;
   ownerAddress: string;
   ownerPhone: string;
+  ownerEmail: string;
   siteId: string;
   lines: LineDraft[];
 }
@@ -28,12 +29,12 @@ type ExtRow = {
  * автоматичния обектен протокол (build.ts) и „Зареди от обект" в сканиращата форма.
  */
 export async function getSiteDrafts(siteId: string): Promise<SiteDrafts> {
-  const empty = { ownerName: '', ownerAddress: '', ownerPhone: '', siteId, lines: [] as LineDraft[] };
+  const empty = { ownerName: '', ownerAddress: '', ownerPhone: '', ownerEmail: '', siteId, lines: [] as LineDraft[] };
   const db = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: site, error: siteErr } = await db
-    .from('sites').select('id,name,address,clients(name,address,phone)').eq('id', siteId).single();
+    .from('sites').select('id,name,address,clients(name,address,phone,email)').eq('id', siteId).single();
   if (siteErr || !site) return { ok: false, status: 404, error: 'Обектът не е намерен', ...empty };
 
   const { data: exts, error: extErr } = await db
@@ -86,13 +87,14 @@ export async function getSiteDrafts(siteId: string): Promise<SiteDrafts> {
 
   const clientRaw = (site as unknown as { clients?: unknown }).clients;
   const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as
-    | { name?: string; address?: string; phone?: string } | undefined;
+    | { name?: string; address?: string; phone?: string; email?: string } | undefined;
   const siteAddr = (site as unknown as { address?: string }).address;
   return {
     ok: true, status: 200,
     ownerName: client?.name ?? '',
     ownerAddress: client?.address ?? siteAddr ?? '',
     ownerPhone: client?.phone ?? '',
+    ownerEmail: client?.email ?? '',
     siteId,
     lines,
   };

@@ -7,6 +7,7 @@ export default function NewSitePage() {
   const [clientName, setClientName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -22,7 +23,7 @@ export default function NewSitePage() {
       const r = await fetch('/api/sites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientName, siteName, address, phone }),
+        body: JSON.stringify({ clientName, siteName, address, phone, email }),
       });
       const j = await r.json();
       if (j.ok && j.siteId) {
@@ -57,6 +58,9 @@ export default function NewSitePage() {
         </label>
         <label style={label}>Телефон
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="по избор" inputMode="tel" />
+        </label>
+        <label style={label}>Имейл (за изпращане на протоколи)
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="по избор — напр. klient@firma.bg" inputMode="email" />
         </label>
         {err && <p className="hint" style={{ color: 'var(--over)' }}>{err}</p>}
         <div className="btn-row" style={{ marginTop: 0 }}>

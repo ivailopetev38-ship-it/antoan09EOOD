@@ -5,7 +5,7 @@ import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
 import { draftToLine, emptyDraft, type LineDraft } from '@/lib/protocol/draft';
 
-interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string }
+interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string; ownerEmail: string }
 
 const TYPE_OPTS = [
   { v: 'powder_abc', l: 'Прахов ABC' }, { v: 'powder_bc', l: 'Прахов BC' },
@@ -126,6 +126,7 @@ export default function StickerScan() {
   const [oSiteId, setOSiteId] = useState<string | undefined>(undefined);
   const [pickedSite, setPickedSite] = useState('');
   const [loadMsg, setLoadMsg] = useState<string | null>(null);
+  const [toEmail, setToEmail] = useState(''); // имейл получател (по избор; празно = EMAIL_TO/към мен)
 
   // Кошница (редовете) + текущ ред за добавяне
   const [cart, setCart] = useState<LineDraft[]>([]);
@@ -206,6 +207,7 @@ export default function StickerScan() {
       const j = await fetch(`/api/protocols/from-site?siteId=${encodeURIComponent(siteId)}`).then((r) => r.json());
       if (!j.ok) { setLoadMsg(`✗ ${j.error ?? 'Грешка'}`); return; }
       setOName(j.ownerName ?? ''); setOAddr(j.ownerAddress ?? ''); setOPhone(j.ownerPhone ?? '');
+      if (j.ownerEmail) setToEmail(j.ownerEmail);
       const lines: LineDraft[] = (j.lines ?? []).map((l: LineDraft) => ({ ...l, id: l.id || newId() }));
       setCart((c) => [...c, ...lines]);
       setLoadMsg(lines.length ? `✓ Заредени ${lines.length} гасителя в протокола` : 'Обектът няма гасители — добави чрез сканиране.');
@@ -240,7 +242,7 @@ export default function StickerScan() {
     if (!canGenerate) { setMail(genHint); return; }
     setGen(true); setMail(null);
     try {
-      const r = await fetch('/api/protocols/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ protocol: buildProtocolData() }) });
+      const r = await fetch('/api/protocols/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ protocol: buildProtocolData(), to: toEmail.trim() || undefined }) });
       const j = await r.json();
       setMail(j.ok ? `✓ Изпратено по имейл (протокол № ${j.protocolNo}, ${cart.length} гасителя)` : `✗ ${j.error ?? 'Имейлът не е изпратен'}`);
     } catch { setMail('✗ Мрежова грешка'); } finally { setGen(false); }
@@ -251,6 +253,7 @@ export default function StickerScan() {
   return (
     <div className="scan-box" style={{ marginTop: 8, maxWidth: 640 }}>
       <datalist id="brand-list">{BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
+      <datalist id="email-list">{[...new Set(sites.map((s) => s.ownerEmail).filter(Boolean))].map((e) => <option key={e} value={e} />)}</datalist>
 
       <div className="sec-h"><h2>🧯 Протокол с пожарогасители</h2></div>
       <p className="hint" style={{ marginBottom: 12 }}>Добави няколко гасителя в <b>един протокол</b> — чрез сканиране или „Зареди от обект". Всяко поле е редактируемо.</p>
@@ -320,8 +323,11 @@ export default function StickerScan() {
         <button className="btn btn-fire" style={{ ...btnBig, marginTop: 14, width: '100%' }} onClick={addToCart}>➕ Добави в протокола</button>
       </div>
 
-      {/* Генериране */}
-      <div className="btn-row" style={{ marginTop: 18 }}>
+      {/* Имейл получател + генериране */}
+      <label className="hint" style={{ display: 'block', marginTop: 18 }}>📧 Изпрати протокола на (имейл) <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(по избор; празно = към мен)</span>
+        <input list="email-list" value={toEmail} onChange={(e) => setToEmail(e.target.value)} style={fieldStyle} inputMode="email" placeholder="напр. klient@firma.bg" />
+      </label>
+      <div className="btn-row" style={{ marginTop: 14 }}>
         <button className="btn btn-fire" style={btnBig} disabled={gen || !canGenerate} onClick={generateWord}>📄 Генерирай Word</button>
         <button className="btn" style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen || !canGenerate} onClick={sendEmail}>✉ Изпрати на имейл</button>
       </div>

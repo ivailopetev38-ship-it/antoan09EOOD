@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     ownerName: sd.ownerName,
     ownerAddress: sd.ownerAddress,
     ownerPhone: sd.ownerPhone,
+    ownerEmail: sd.ownerEmail,
     siteId: sd.siteId,
     lines: sd.lines,
   });
