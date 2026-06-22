@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateCustomProtocol } from '@/lib/protocol/custom';
+import { attachmentDisposition } from '@/lib/http/contentDisposition';
 import type { ProtocolData } from '@/lib/protocol/types';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': attachmentDisposition(filename),
     },
   });
 }
