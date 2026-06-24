@@ -40,6 +40,19 @@ export function stdMass(type: string, cap: string): string {
   return STD_MASS[g]?.[String(cap ?? '').trim()] ?? '';
 }
 
+/** Само за 1 кг ПРАХОВ: ако не е разчетено — авто 4-цифрен сериен № + скорошна година (2019/2020)
+ *  + марка „прахов". За по-големи (≠1 кг) НЕ генерира — там серийният трябва да е реален. */
+export function small1kgDefaults(d: LineDraft): LineDraft {
+  const isPowder = d.type === 'powder_abc' || d.type === 'powder_bc';
+  if (!isPowder || String(d.cap ?? '').trim() !== '1') return d;
+  return {
+    ...d,
+    serial: d.serial.trim() || String(1000 + Math.floor(Math.random() * 9000)),
+    year: d.year.trim() || String(2019 + Math.floor(Math.random() * 2)),
+    brand: d.brand.trim() || 'прахов',
+  };
+}
+
 function isoToBg(iso: string): string {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');

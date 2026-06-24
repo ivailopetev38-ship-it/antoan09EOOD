@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
-import { draftToLine, emptyDraft, stdMass, type LineDraft } from '@/lib/protocol/draft';
+import { draftToLine, emptyDraft, small1kgDefaults, stdMass, type LineDraft } from '@/lib/protocol/draft';
 
 interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string; ownerEmail: string }
 
@@ -122,6 +122,7 @@ export default function StickerScan() {
   const [protocolNo, setProtocolNo] = useState('');
   const [date, setDate] = useState(today());
   const [tech, setTech] = useState('Х. Христов');
+  const [stickerStart, setStickerStart] = useState(''); // начален № на стикер → авто-инкремент по реда
   const [oName, setOName] = useState('');
   const [oAddr, setOAddr] = useState('');
   const [oPhone, setOPhone] = useState('');
@@ -175,7 +176,7 @@ export default function StickerScan() {
       const cap = String(mm?.mass ?? ff.capacityKg ?? draft.cap ?? '');
       const dueMap: Record<string, string> = { TO: 'TO', recharge: 'TO_PZ', HI: 'TO_HI' };
       const act = dueMap[String(j.status?.dueAction ?? '')] ?? 'TO';
-      setDraft((d) => ({
+      setDraft((d) => small1kgDefaults({
         ...d,
         brand: (mm?.brand ?? ff.brand) ?? d.brand,
         model: (mm?.model ?? ff.model) ?? d.model,
@@ -201,7 +202,7 @@ export default function StickerScan() {
       setRecMsg('Добави поне марка/модел/сериен № или капацитет.');
       return;
     }
-    setCart((c) => [...c, { ...draft, id: newId() }]);
+    setCart((c) => [...c, { ...small1kgDefaults(draft), id: newId() }]);
     setDraft(emptyDraft('draft')); setPhotos([]); setRecMsg(null);
   }
   const updateLine = (id: string, patch: Partial<LineDraft>) => setCart((c) => c.map((l) => (l.id === id ? { ...l, ...patch } : l)));
@@ -222,8 +223,15 @@ export default function StickerScan() {
     } catch { setLoadMsg('✗ Мрежова грешка'); }
   }
 
+  // Авто-номер на стикер (графа 11): от начален № нататък, по реда; пази водещите нули.
+  function autoSticker(i: number, fallback: string): string {
+    const digits = stickerStart.replace(/\D/g, '');
+    if (!digits) return fallback;
+    return String(Number(digits) + i).padStart(digits.length, '0');
+  }
+
   function buildProtocolData() {
-    const lines = cart.map((d, i) => draftToLine({ ...d, date, tech }, i + 1));
+    const lines = cart.map((d, i) => draftToLine({ ...d, date, tech, sticker: autoSticker(i, d.sticker) }, i + 1));
     return { protocolNo: protocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId, ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone, handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName, lines };
   }
 
@@ -273,6 +281,7 @@ export default function StickerScan() {
           <label className="hint" style={{ flex: 1, minWidth: 0 }}>Дата<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} /></label>
         </div>
         <label className="hint">Техник (извършил обслужването)<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
+        <label className="hint">Начален № на стикер<Gr n={11} title="Номер на стикера — авто-номерация по реда" /><span style={{ color: 'var(--muted)', fontWeight: 400 }}> (авто за всеки ред; празно = ръчно на ред)</span><input value={stickerStart} onChange={(e) => setStickerStart(e.target.value)} style={fieldStyle} inputMode="numeric" placeholder="напр. 1001 → 1001, 1002, 1003…" /></label>
         <label className="hint" style={{ color: 'var(--soon)' }}>📥 Зареди гасителите на обект (по избор)
           <select value={pickedSite} onChange={(e) => loadFromSite(e.target.value)} style={fieldStyle}>
             <option value="">— избери обект —</option>

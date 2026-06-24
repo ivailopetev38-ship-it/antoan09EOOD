@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildMarkings } from './markings';
-import { draftToLine, emptyDraft, stdMass } from './draft';
+import { draftToLine, emptyDraft, small1kgDefaults, stdMass } from './draft';
 
 describe('buildMarkings', () => {
   it('сглобява от марка+клас+капацитет когато няма модел', () => {
@@ -53,5 +53,23 @@ describe('stdMass', () => {
     expect(stdMass('co2', '5')).toBe('14,0');
     expect(stdMass('water', '9')).toBe('13,5');
     expect(stdMass('powder_abc', '999')).toBe('');
+  });
+});
+
+describe('small1kgDefaults', () => {
+  it('1 кг прахов без данни → авто 4-цифрен сериен + скорошна година + марка „прахов"', () => {
+    const r = small1kgDefaults({ ...emptyDraft('1'), type: 'powder_abc', cap: '1' });
+    expect(r.serial).toMatch(/^\d{4}$/);
+    expect(['2019', '2020']).toContain(r.year);
+    expect(r.brand).toBe('прахов');
+  });
+  it('над 1 кг → НЕ генерира (серийният остава празен)', () => {
+    const r = small1kgDefaults({ ...emptyDraft('2'), type: 'powder_abc', cap: '6' });
+    expect(r.serial).toBe('');
+    expect(r.brand).toBe('');
+  });
+  it('пази вече въведените стойности', () => {
+    const r = small1kgDefaults({ ...emptyDraft('3'), type: 'powder_abc', cap: '1', serial: 'ABC-1', year: '2015', brand: 'Спарк' });
+    expect(r.serial).toBe('ABC-1'); expect(r.year).toBe('2015'); expect(r.brand).toBe('Спарк');
   });
 });
