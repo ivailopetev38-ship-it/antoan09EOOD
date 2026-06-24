@@ -18,6 +18,8 @@ export interface ProtocolData {
   ownerName: string;
   ownerAddress: string;
   ownerPhone: string;
+  handedBy?: string;         // ПРЕДАЛ + представителят в увода (по подр. „В. Вълков")
+  receivedBy?: string;       // ПРИЕЛ (по подр. = ownerName)
   siteId?: string;           // обект (за записване в дневника + пореден номер)
   lines: ProtocolLineData[];
 }

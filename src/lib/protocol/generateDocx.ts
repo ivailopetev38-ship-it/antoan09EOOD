@@ -14,6 +14,12 @@ export function generateProtocolDocx(data: ProtocolData): Buffer {
     linebreaks: true,
     delimiters: { start: '{', end: '}' },
   });
-  doc.render(data);
+  // Стойности по подразбиране за подписите (важат за всички пътища: кошница, build.ts, имейл).
+  const full = {
+    ...data,
+    handedBy: (data.handedBy && data.handedBy.trim()) || 'В. Вълков',
+    receivedBy: (data.receivedBy && data.receivedBy.trim()) || data.ownerName,
+  };
+  doc.render(full);
   return doc.getZip().generate({ type: 'nodebuffer' });
 }

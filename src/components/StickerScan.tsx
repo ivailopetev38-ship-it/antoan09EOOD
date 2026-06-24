@@ -123,6 +123,8 @@ export default function StickerScan() {
   const [oName, setOName] = useState('');
   const [oAddr, setOAddr] = useState('');
   const [oPhone, setOPhone] = useState('');
+  const [handedBy, setHandedBy] = useState('В. Вълков'); // ПРЕДАЛ + представител в увода
+  const [receivedBy, setReceivedBy] = useState('');       // ПРИЕЛ (празно = собственика)
   const [oSiteId, setOSiteId] = useState<string | undefined>(undefined);
   const [pickedSite, setPickedSite] = useState('');
   const [loadMsg, setLoadMsg] = useState<string | null>(null);
@@ -216,7 +218,7 @@ export default function StickerScan() {
 
   function buildProtocolData() {
     const lines = cart.map((d, i) => draftToLine({ ...d, date, tech }, i + 1));
-    return { protocolNo: protocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId, ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone, lines };
+    return { protocolNo: protocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId, ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone, handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName, lines };
   }
 
   const canGenerate = !!oName.trim() && cart.length > 0;
@@ -276,6 +278,10 @@ export default function StickerScan() {
         <div className="frow">
           <label className="hint" style={{ flex: 2, minWidth: 0 }}>Адрес<input value={oAddr} onChange={(e) => setOAddr(e.target.value)} style={fieldStyle} /></label>
           <label className="hint" style={{ flex: 1, minWidth: 0 }}>Телефон<input value={oPhone} onChange={(e) => setOPhone(e.target.value)} style={fieldStyle} inputMode="tel" /></label>
+        </div>
+        <div className="frow">
+          <label className="hint" style={{ flex: 1, minWidth: 0 }}>Предал <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(представител на сервиза)</span><input value={handedBy} onChange={(e) => setHandedBy(e.target.value)} style={fieldStyle} placeholder="напр. В. Вълков" /></label>
+          <label className="hint" style={{ flex: 1, minWidth: 0 }}>Приел <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(приемащ)</span><input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} style={fieldStyle} placeholder="празно = собственика" /></label>
         </div>
       </div>
 
