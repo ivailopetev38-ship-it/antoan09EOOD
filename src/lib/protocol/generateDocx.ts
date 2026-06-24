@@ -14,11 +14,12 @@ export function generateProtocolDocx(data: ProtocolData): Buffer {
     linebreaks: true,
     delimiters: { start: '{', end: '}' },
   });
-  // Стойности по подразбиране за подписите (важат за всички пътища: кошница, build.ts, имейл).
+  // Подписи: уважаваме ТОЧНО подаденото. undefined (липсващо поле, напр. build.ts) → подразбиране;
+  // '' (изрично изчистено от потребителя) → ОСТАВА празно (без скрит fallback към „В. Вълков"/собственик).
   const full = {
     ...data,
-    handedBy: (data.handedBy && data.handedBy.trim()) || 'В. Вълков',
-    receivedBy: (data.receivedBy && data.receivedBy.trim()) || data.ownerName,
+    handedBy: data.handedBy === undefined ? 'В. Вълков' : data.handedBy,
+    receivedBy: data.receivedBy === undefined ? data.ownerName : data.receivedBy,
   };
   doc.render(full);
   return doc.getZip().generate({ type: 'nodebuffer' });

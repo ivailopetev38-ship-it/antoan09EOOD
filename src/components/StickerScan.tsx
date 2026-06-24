@@ -252,6 +252,7 @@ export default function StickerScan() {
       const j = await fetch(`/api/protocols/from-site?siteId=${encodeURIComponent(siteId)}`).then((r) => r.json());
       if (!j.ok) { setLoadMsg(`✗ ${j.error ?? 'Грешка'}`); return; }
       setOName(j.ownerName ?? ''); setOAddr(j.ownerAddress ?? ''); setOPhone(j.ownerPhone ?? '');
+      setReceivedBy(j.ownerName ?? ''); // „Приел" се пред-попълва със собственика (видимо, изтриваемо)
       if (j.ownerEmail) setToEmail(j.ownerEmail);
       // Пълним САМО собственика — старите гасители на обекта НЕ се зареждат;
       // въвеждат се нови (сканиране/ръчно) за новия протокол.
@@ -277,7 +278,7 @@ export default function StickerScan() {
       protocolNo: N > 1 ? `${baseNo}${baseNo ? ' ' : ''}(стр. ${ci + 1}/${N})` : baseNo,
       date: bg(date), city: 'Нова Загора', siteId: oSiteId,
       ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone,
-      handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName,
+      handedBy: handedBy.trim(), receivedBy: receivedBy.trim(), // точно каквото е в полетата (празно = празно)
       lines: group.map((d, i) => draftToLine({ ...d, date, tech, sticker: autoSticker(ci * MAX_PER_PROTOCOL + i, d.sticker) }, i + 1)),
     }));
   }
@@ -348,7 +349,7 @@ export default function StickerScan() {
         </div>
         <div className="frow">
           <label className="hint" style={{ flex: 1, minWidth: 0 }}>Предал <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(представител на сервиза)</span><input value={handedBy} onChange={(e) => setHandedBy(e.target.value)} style={fieldStyle} placeholder="напр. В. Вълков" /></label>
-          <label className="hint" style={{ flex: 1, minWidth: 0 }}>Приел <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(приемащ)</span><input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} style={fieldStyle} placeholder="празно = собственика" /></label>
+          <label className="hint" style={{ flex: 1, minWidth: 0 }}>Приел <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(приемащ)</span><input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} style={fieldStyle} placeholder="напр. собственика (празно = празно)" /></label>
         </div>
       </div>
 
