@@ -253,9 +253,9 @@ export default function StickerScan() {
       if (!j.ok) { setLoadMsg(`✗ ${j.error ?? 'Грешка'}`); return; }
       setOName(j.ownerName ?? ''); setOAddr(j.ownerAddress ?? ''); setOPhone(j.ownerPhone ?? '');
       if (j.ownerEmail) setToEmail(j.ownerEmail);
-      const lines: LineDraft[] = (j.lines ?? []).map((l: LineDraft) => ({ ...l, id: l.id || newId() }));
-      setCart((c) => [...c, ...lines]);
-      setLoadMsg(lines.length ? `✓ Заредени ${lines.length} гасителя в протокола` : 'Обектът няма гасители — добави чрез сканиране.');
+      // Пълним САМО собственика — старите гасители на обекта НЕ се зареждат;
+      // въвеждат се нови (сканиране/ръчно) за новия протокол.
+      setLoadMsg('✓ Избран обект — сега добави новите гасители за протокола');
     } catch { setLoadMsg('✗ Мрежова грешка'); }
   }
 
@@ -334,7 +334,7 @@ export default function StickerScan() {
         </div>
         <label className="hint">Техник (извършил обслужването)<input value={tech} onChange={(e) => setTech(e.target.value)} style={fieldStyle} placeholder="напр. Х. Христов" /></label>
         <label className="hint">Начален № на стикер<Gr n={11} title="Номер на стикера — авто-номерация по реда" /><span style={{ color: 'var(--muted)', fontWeight: 400 }}> (авто за всеки ред; празно = ръчно на ред)</span><input value={stickerStart} onChange={(e) => setStickerStart(e.target.value)} style={fieldStyle} inputMode="numeric" placeholder="напр. 1001 → 1001, 1002, 1003…" /></label>
-        <label className="hint" style={{ color: 'var(--soon)' }}>📥 Зареди гасителите на обект (по избор)
+        <label className="hint" style={{ color: 'var(--soon)' }}>🏢 Избери обект — попълва собственика (по избор)
           <select value={pickedSite} onChange={(e) => loadFromSite(e.target.value)} style={fieldStyle}>
             <option value="">— избери обект —</option>
             {sites.map((s) => <option key={s.id} value={s.id}>{s.siteName} · {s.ownerName}</option>)}
