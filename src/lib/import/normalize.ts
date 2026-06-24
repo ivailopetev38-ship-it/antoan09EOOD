@@ -5,11 +5,13 @@ export function normalizeType(raw: string): ExtinguisherType | null {
   if (!t.trim()) return null;
   if (/со2|co2|въглерод/.test(t)) return 'co2';
   if (/водопен|пяна|пенопен|foam/.test(t)) return 'foam';
-  if (/вод|water/.test(t)) return 'water';
+  // Прах преди вода: иначе „производство" (съдържа „вод") би подвело при прахов стикер.
   if (/прах|powder/.test(t)) {
     if (/\bbc\b|\sbc\s|бц/.test(t)) return 'powder_bc';
     return 'powder_abc';
   }
+  // Само цели думи за вода — НЕ голо „вод" (за да не лови „производство", „проводник" и др.).
+  if (/вода|воден|водна|водни|water/.test(t)) return 'water';
   return null;
 }
 

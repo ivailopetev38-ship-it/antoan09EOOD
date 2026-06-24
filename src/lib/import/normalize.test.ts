@@ -21,6 +21,11 @@ describe('normalizeType', () => {
     expect(normalizeType('нещо')).toBeNull();
     expect(normalizeType('')).toBeNull();
   });
+  it('не бърка „производство" с вода (думата съдържа „вод")', () => {
+    expect(normalizeType('Тип: прахов ABC, Година на производство 2021')).toBe('powder_abc');
+    expect(normalizeType('CO2, производство 2019')).toBe('co2');
+    expect(normalizeType('воден, производство 2020')).toBe('water'); // явна „вода/воден" печели
+  });
 });
 
 describe('parseYear', () => {
