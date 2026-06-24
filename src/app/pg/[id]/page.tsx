@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { getExtinguisher } from "@/lib/dashboard/queries";
 import { GenerateProtocolButton } from "@/components/GenerateProtocolButton";
 import RecordServiceForm from "@/components/RecordServiceForm";
+import ScheduleReminder from "@/components/ScheduleReminder";
 import type { ExtinguisherType } from "@/lib/regulatory/types";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +80,8 @@ export default async function ExtinguisherPage({ params }: { params: Promise<{ i
             <span className="hint" style={{ color: "var(--scrap)" }}>Бракуван — не влиза в протокол за предаване.</span>
           )}
         </div>
+
+        <ScheduleReminder siteId={site.id} extinguisherId={ext.id} clientName={client?.name ?? ""} siteName={site.name} model={ext.model} serial={ext.serial_number} />
       </div>
 
       <div className="grid2">

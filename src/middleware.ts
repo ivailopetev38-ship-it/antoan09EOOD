@@ -41,8 +41,11 @@ async function validCookie(value: string, secret: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Публични пътища: самият портал и auth API-то.
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return NextResponse.next();
+  // Публични пътища: порталът, auth API-то и крон-маршрутът за напомняния
+  // (последният се пази със собствена тайна / x-vercel-cron хедър в самия route).
+  if (pathname === '/login' || pathname.startsWith('/api/auth/') || pathname === '/api/reminders/run') {
+    return NextResponse.next();
+  }
 
   const USER = process.env.APP_USER;
   const PASS = process.env.APP_PASSWORD;

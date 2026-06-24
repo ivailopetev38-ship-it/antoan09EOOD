@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { getEnrichedExtinguishers } from '@/lib/dashboard/queries';
+import { createServiceClient } from '@/lib/supabase/server';
 import ReminderButton from '@/components/ReminderButton';
+
+interface SchedRow { id: string; model: string | null; serial: string | null; client_name: string | null; site_name: string | null; due_date: string }
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +14,10 @@ export default async function RemindersPage() {
   const due = all
     .filter((e) => (e.status.level === 'overdue' || e.status.level === 'soon') && e.status.nextDue)
     .sort((a, b) => (a.status.daysUntil ?? 0) - (b.status.daysUntil ?? 0));
+
+  const db = createServiceClient();
+  const { data: schedRows } = await db.from('reminders').select('id, model, serial, client_name, site_name, due_date').eq('sent', false).order('due_date');
+  const scheduled = (schedRows ?? []) as SchedRow[];
 
   return (
     <div className="wrap">
@@ -44,6 +51,23 @@ export default async function RemindersPage() {
               nextDue={e.status.nextDue as string}
               overdue={e.status.level === 'overdue'}
             />
+          </div>
+        </div>
+      ))}
+
+      <div className="sec-h" style={{ marginTop: 22 }}>
+        <h2>📅 Насрочени напомняния</h2>
+        <div className="meta">{scheduled.length}</div>
+      </div>
+      {scheduled.length === 0 && <div className="hint">Няма насрочени напомняния (насрочи от картата на гасител).</div>}
+      {scheduled.map((r) => (
+        <div key={r.id} className="ext soon" style={{ display: 'block' }}>
+          <div className="main">
+            <div className="nm">{r.model ?? 'Пожарогасител'}{r.serial ? ` № ${r.serial}` : ''}</div>
+            <div className="meta">
+              <span>{r.client_name ?? ''}{r.site_name ? ` · ${r.site_name}` : ''}</span>
+              <span className="chip soon">напомняне на {bg(r.due_date)}</span>
+            </div>
           </div>
         </div>
       ))}
