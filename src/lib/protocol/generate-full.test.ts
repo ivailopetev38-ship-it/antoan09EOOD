@@ -46,13 +46,13 @@ describe('Мапване LineDraft → графи (точни стойности
   it('ред 2 — прах BC, презареждане (с търговско наименование)', () => {
     expect(lines[1]).toMatchObject({
       markings: 'Бавария BC 6 кг № S2 / 2018', mass: '9,500', agent: 'Прах',
-      serviceKind: 'П', agentTradeName: 'Прах ABC ICL',
+      serviceKind: 'ТО + ПЗ', agentTradeName: 'Прах ABC ICL',
     });
   });
   it('ред 3 — вода (единица „л"), ХИ', () => {
     expect(lines[2]).toMatchObject({
       markings: 'Chubb W 9 л № S3 / 2013', mass: '12,000', agent: 'Вода',
-      serviceKind: 'ХИ', agentTradeName: 'Вода питейна',
+      serviceKind: 'ТО + ХИ', agentTradeName: 'Вода питейна',
     });
   });
   it('ред 4 — пяна, резервна маркировка по модел, ТО (без търговско)', () => {
@@ -64,7 +64,7 @@ describe('Мапване LineDraft → графи (точни стойности
   it('ред 5 — CO2, презареждане', () => {
     expect(lines[4]).toMatchObject({
       markings: 'Mygt CO2 5 кг № S5 / 2020', mass: '14,000', agent: 'CO2',
-      serviceKind: 'П', agentTradeName: 'CO2 99,9%',
+      serviceKind: 'ТО + ПЗ', agentTradeName: 'CO2 99,9%',
     });
   });
 });

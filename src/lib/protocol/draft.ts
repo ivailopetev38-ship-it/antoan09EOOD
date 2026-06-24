@@ -22,7 +22,23 @@ export interface LineDraft {
 export const AGENT_LABEL: Record<string, string> = {
   powder_abc: 'Прах', powder_bc: 'Прах', water: 'Вода', foam: 'Пяна', co2: 'CO2',
 };
-export const KIND_LABEL: Record<string, string> = { TO: 'ТО', recharge: 'П', HI: 'ХИ' };
+// Графа 7: ТО винаги присъства; ред ТО → ХИ → ПЗ; презареждане = „ПЗ" (не „П").
+export const KIND_LABEL: Record<string, string> = {
+  TO: 'ТО', TO_HI: 'ТО + ХИ', TO_PZ: 'ТО + ПЗ', TO_HI_PZ: 'ТО + ХИ + ПЗ',
+  recharge: 'ТО + ПЗ', HI: 'ТО + ХИ', // съвместимост със стари стойности
+};
+
+/** Стандартни „общи маси" (бруто, кг) по вид + капацитет — графа 4 (редактируеми, индустриално-типични). */
+const STD_MASS: Record<string, Record<string, string>> = {
+  powder: { '1': '2,0', '2': '3,5', '3': '4,8', '4': '6,4', '6': '9,5', '9': '14,0', '12': '18,5' },
+  water: { '6': '9,0', '9': '13,5' },
+  foam: { '6': '9,5', '9': '14,0' },
+  co2: { '2': '6,5', '5': '14,0', '6': '16,0' },
+};
+export function stdMass(type: string, cap: string): string {
+  const g = type === 'co2' ? 'co2' : type === 'water' ? 'water' : type === 'foam' ? 'foam' : 'powder';
+  return STD_MASS[g]?.[String(cap ?? '').trim()] ?? '';
+}
 
 function isoToBg(iso: string): string {
   if (!iso) return '';
@@ -40,7 +56,7 @@ export function emptyDraft(id: string): LineDraft {
 /** LineDraft → ред в протокола (ProtocolLineData). Датата се подава като ISO и се форматира. */
 export function draftToLine(d: LineDraft, idx: number): ProtocolLineData {
   const massNum = Number((d.totalMass || '0').replace(',', '.'));
-  const needsAgent = d.action === 'recharge' || d.action === 'HI';
+  const needsAgent = d.action !== 'TO'; // графа 6 (търговско наименование) при ПЗ или ХИ
   return {
     idx,
     markings: buildMarkings({ brand: d.brand, model: d.model, type: d.type, capacity: d.cap, serial: d.serial, year: d.year }),

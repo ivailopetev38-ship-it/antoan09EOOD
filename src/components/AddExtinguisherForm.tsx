@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
 
-const CAT_OPTS = ['К1', 'К2', 'К3', 'К4', 'К5'];
+const CAT_OPTS = ['К1', 'К2', 'К5']; // К1 водопенни/водни · К2 прахови · К5 въглеродни
 
 const TYPES = [
   { v: 'powder_abc', label: 'Прахов ABC' },

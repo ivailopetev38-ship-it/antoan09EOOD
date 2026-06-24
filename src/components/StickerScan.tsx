@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
-import { draftToLine, emptyDraft, type LineDraft } from '@/lib/protocol/draft';
+import { draftToLine, emptyDraft, stdMass, type LineDraft } from '@/lib/protocol/draft';
 
 interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string; ownerEmail: string }
 
@@ -12,11 +12,13 @@ const TYPE_OPTS = [
   { v: 'water', l: 'Воден' }, { v: 'foam', l: 'Водопенен' }, { v: 'co2', l: 'CO₂' },
 ];
 const CAP_OPTS = ['1', '2', '3', '4', '5', '6', '9', '12', '25', '50'];
-const CAT_OPTS = ['К1', 'К2', 'К3', 'К4', 'К5'];
+const CAT_OPTS = ['К1', 'К2', 'К5']; // К1 водопенни/водни · К2 прахови · К5 въглеродни (CO₂)
+// Графа 7: ТО винаги присъства; по избор + ХИ и/или ПЗ (ред ТО → ХИ → ПЗ).
 const KIND_OPTS = [
-  { v: 'TO', l: 'ТО — техническо обслужване' },
-  { v: 'recharge', l: 'П — презареждане / смяна' },
-  { v: 'HI', l: 'ХИ — хидростатично изпитване' },
+  { v: 'TO', l: 'само ТО (техническо обслужване)' },
+  { v: 'TO_HI', l: 'ТО + ХИ (хидростатично)' },
+  { v: 'TO_PZ', l: 'ТО + ПЗ (презареждане)' },
+  { v: 'TO_HI_PZ', l: 'ТО + ХИ + ПЗ' },
 ];
 const BRANDS = ['Спарк', 'Солти', 'Огнехром', 'Торнадо', 'Дрипалдер', 'Ятрус', 'Sparky', 'Gloria', 'Bavaria', 'Total', 'Minimax', 'Ceasefire', 'Tyco', 'Sicli', 'Chubb', 'FirePro', 'Ansul', 'Kidde', 'Amerex', 'Pastor'];
 
@@ -68,7 +70,7 @@ async function loadImageDataUrl(file: File): Promise<string> {
 // Редактируеми полета за един ред (гасител). Преизползва се за кошницата и за добавянето.
 function LineFields({ d, on }: { d: LineDraft; on: (p: Partial<LineDraft>) => void }) {
   const capOptions = CAP_OPTS.includes(d.cap) || !d.cap ? CAP_OPTS : [d.cap, ...CAP_OPTS];
-  const needsAgent = d.action === 'recharge' || d.action === 'HI';
+  const needsAgent = d.action !== 'TO'; // графа 6 при ПЗ или ХИ
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <label className="hint">Марка<Gr n={2} title="Ид. маркировка (марка, модел, сериен №, година)" />
@@ -77,10 +79,10 @@ function LineFields({ d, on }: { d: LineDraft; on: (p: Partial<LineDraft>) => vo
       <label className="hint">Модел<Gr n={2} title="Ид. маркировка" /><input value={d.model} onChange={(e) => on({ model: e.target.value })} style={fieldStyle} placeholder="напр. Спарк 6 кг" /></label>
       <div className="frow">
         <label className="hint" style={{ flex: 1, minWidth: 0 }}>Тип<Gr n={5} title="Пожарогасително вещество (вода, прах, CO₂)" />
-          <select value={d.type} onChange={(e) => on({ type: e.target.value, category: deriveCategory(e.target.value as ExtinguisherType) })} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
+          <select value={d.type} onChange={(e) => { const tp = e.target.value; on({ type: tp, category: deriveCategory(tp as ExtinguisherType), totalMass: stdMass(tp, d.cap) || d.totalMass }); }} style={fieldStyle}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
         </label>
         <label className="hint" style={{ flex: 1, minWidth: 0 }}>Капацитет (кг/л)<Gr n={2} title="Влиза в маркировката" />
-          <select value={d.cap} onChange={(e) => on({ cap: e.target.value })} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+          <select value={d.cap} onChange={(e) => { const cp = e.target.value; on({ cap: cp, totalMass: stdMass(d.type, cp) || d.totalMass }); }} style={fieldStyle}><option value="">—</option>{capOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
         </label>
       </div>
       <div className="frow">
@@ -170,6 +172,9 @@ export default function StickerScan() {
       if (!j.ok) { setRecMsg(`✗ ${j.error ?? 'Грешка при разпознаване'}`); return; }
       const mm = j.match; const ff = j.fields ?? {};
       const t = String(mm?.type ?? ff.type ?? draft.type);
+      const cap = String(mm?.mass ?? ff.capacityKg ?? draft.cap ?? '');
+      const dueMap: Record<string, string> = { TO: 'TO', recharge: 'TO_PZ', HI: 'TO_HI' };
+      const act = dueMap[String(j.status?.dueAction ?? '')] ?? 'TO';
       setDraft((d) => ({
         ...d,
         brand: (mm?.brand ?? ff.brand) ?? d.brand,
@@ -177,9 +182,10 @@ export default function StickerScan() {
         serial: String(mm?.serial ?? ff.serial ?? d.serial),
         year: String(mm?.year ?? ff.year ?? d.year),
         type: t,
-        cap: String(mm?.mass ?? ff.capacityKg ?? d.cap),
+        cap,
+        totalMass: stdMass(t, cap) || d.totalMass,
         category: mm?.category || deriveCategory(t as ExtinguisherType),
-        action: j.status?.dueAction ?? d.action,
+        action: act,
       }));
       // Първият разпознат собственик попълва заглавната част (ако още е празна).
       if (mm && !oName.trim()) {
@@ -191,8 +197,8 @@ export default function StickerScan() {
   }
 
   function addToCart() {
-    if (!(draft.serial.trim() || draft.brand.trim() || draft.model.trim())) {
-      setRecMsg('Попълни поне марка/модел или сериен №, преди да добавиш.');
+    if (!(draft.serial.trim() || draft.brand.trim() || draft.model.trim() || draft.cap.trim())) {
+      setRecMsg('Добави поне марка/модел/сериен № или капацитет.');
       return;
     }
     setCart((c) => [...c, { ...draft, id: newId() }]);
@@ -221,8 +227,8 @@ export default function StickerScan() {
     return { protocolNo: protocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId, ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone, handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName, lines };
   }
 
-  const canGenerate = !!oName.trim() && cart.length > 0;
-  const genHint = !oName.trim() ? 'Попълни собственик (или зареди обект).' : cart.length === 0 ? 'Добави поне един гасител в протокола.' : '';
+  const canGenerate = cart.length > 0; // собственикът вече не е задължителен — всяко поле е свободно
+  const genHint = cart.length === 0 ? 'Добави поне един гасител в протокола.' : '';
 
   async function generateWord() {
     if (!canGenerate) { setMail(genHint); return; }
