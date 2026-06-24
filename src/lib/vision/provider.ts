@@ -33,12 +33,12 @@ const UNRECOGNIZED: RecognizeResult = {
 
 function hermesProvider(url: string, token: string): VisionProvider {
   return {
-    async recognize(imageBase64: string): Promise<RecognizeResult> {
+    async recognize(imageBase64: string, effort?: 'high'): Promise<RecognizeResult> {
       try {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ imageBase64, task: 'extinguisher_sticker', schemaVersion: 1 }),
+          body: JSON.stringify({ imageBase64, task: 'extinguisher_sticker', schemaVersion: 1, ...(effort ? { effort } : {}) }),
         });
         if (!res.ok) throw new Error(`Hermes vision ${res.status}`);
         const json = (await res.json()) as {

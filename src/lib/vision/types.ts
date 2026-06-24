@@ -20,5 +20,5 @@ export interface RecognizeResult {
 }
 
 export interface VisionProvider {
-  recognize(imageBase64: string): Promise<RecognizeResult>;
+  recognize(imageBase64: string, effort?: 'high'): Promise<RecognizeResult>;
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { deriveCategory } from '@/lib/regulatory/category';
 import type { ExtinguisherType } from '@/lib/regulatory/types';
 import { draftToLine, emptyDraft, small1kgDefaults, stdMass, type LineDraft } from '@/lib/protocol/draft';
+import type { ProtocolData } from '@/lib/protocol/types';
 
 interface Site { id: string; siteName: string; ownerName: string; ownerAddress: string; ownerPhone: string; ownerEmail: string }
 
@@ -161,13 +162,13 @@ export default function StickerScan() {
     e.target.value = '';
   }
 
-  async function recognize() {
+  async function recognize(effort?: 'high') {
     if (!photos.length) { setRecMsg('Добави поне една снимка.'); return; }
     setBusy(true); setRecMsg(null);
     try {
       const imageBase64List = photos.map((u) => u.split(',')[1] ?? '').filter(Boolean);
       const r = await fetch('/api/vision/sticker', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64List }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64List, ...(effort ? { effort } : {}) }),
       });
       const j = await r.json();
       if (!j.ok) { setRecMsg(`✗ ${j.error ?? 'Грешка при разпознаване'}`); return; }
@@ -194,6 +195,41 @@ export default function StickerScan() {
         if (mm.siteId) { setOSiteId(mm.siteId); setPickedSite(mm.siteId); }
       }
       setRecMsg(mm ? `✓ Разпознат и намерен (${mm.ownerName || mm.siteName})` : '✓ Разпознат — провери полетата и добави');
+    } catch { setRecMsg('✗ Мрежова грешка'); } finally { setBusy(false); }
+  }
+
+  // Партидно разпознаване: всяка снимка = отделен гасител → отделен ред в кошницата.
+  async function recognizeBatch() {
+    if (!photos.length) { setRecMsg('Добави снимки (по една на гасител).'); return; }
+    setBusy(true); setRecMsg(null);
+    const dueMap: Record<string, string> = { TO: 'TO', recharge: 'TO_PZ', HI: 'TO_HI' };
+    let added = 0;
+    try {
+      for (const p of photos) {
+        const b64 = p.split(',')[1] ?? '';
+        if (!b64) continue;
+        const r = await fetch('/api/vision/sticker', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64List: [b64] }) });
+        const j = await r.json();
+        if (!j.ok) continue;
+        const mm = j.match; const ff = j.fields ?? {};
+        const t = String(mm?.type ?? ff.type ?? 'powder_abc');
+        const cap = String(mm?.mass ?? ff.capacityKg ?? '');
+        const row = small1kgDefaults({
+          ...emptyDraft(newId()),
+          brand: (mm?.brand ?? ff.brand) ?? '',
+          model: (mm?.model ?? ff.model) ?? '',
+          serial: String(mm?.serial ?? ff.serial ?? ''),
+          year: String(mm?.year ?? ff.year ?? ''),
+          type: t, cap, totalMass: stdMass(t, cap),
+          category: mm?.category || deriveCategory(t as ExtinguisherType),
+          action: dueMap[String(j.status?.dueAction ?? '')] ?? 'TO',
+        });
+        setCart((c) => [...c, row]);
+        added++;
+        if (mm && !oName.trim()) { setOName(mm.ownerName ?? ''); setOAddr(mm.ownerAddress ?? ''); setOPhone(mm.ownerPhone ?? ''); if (mm.siteId) { setOSiteId(mm.siteId); setPickedSite(mm.siteId); } }
+      }
+      setPhotos([]);
+      setRecMsg(added ? `✓ Добавени ${added} гасителя (по една снимка всеки)` : '✗ Нищо не се разпозна — провери снимките');
     } catch { setRecMsg('✗ Мрежова грешка'); } finally { setBusy(false); }
   }
 
@@ -230,27 +266,43 @@ export default function StickerScan() {
     return String(Number(digits) + i).padStart(digits.length, '0');
   }
 
-  function buildProtocolData() {
-    const lines = cart.map((d, i) => draftToLine({ ...d, date, tech, sticker: autoSticker(i, d.sticker) }, i + 1));
-    return { protocolNo: protocolNo.trim(), date: bg(date), city: 'Нова Загора', siteId: oSiteId, ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone, handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName, lines };
+  const MAX_PER_PROTOCOL = 10; // лимит на гасители/протокол (двустранен печат с декларацията)
+  // Разделя кошницата на протоколи по ≤10 гасителя; стикер-номерата текат непрекъснато през частите.
+  function buildChunks(): ProtocolData[] {
+    const groups: LineDraft[][] = [];
+    for (let i = 0; i < cart.length; i += MAX_PER_PROTOCOL) groups.push(cart.slice(i, i + MAX_PER_PROTOCOL));
+    const N = groups.length;
+    const baseNo = protocolNo.trim();
+    return groups.map((group, ci) => ({
+      protocolNo: N > 1 ? `${baseNo}${baseNo ? ' ' : ''}(стр. ${ci + 1}/${N})` : baseNo,
+      date: bg(date), city: 'Нова Загора', siteId: oSiteId,
+      ownerName: oName, ownerAddress: oAddr, ownerPhone: oPhone,
+      handedBy: handedBy.trim() || 'В. Вълков', receivedBy: receivedBy.trim() || oName,
+      lines: group.map((d, i) => draftToLine({ ...d, date, tech, sticker: autoSticker(ci * MAX_PER_PROTOCOL + i, d.sticker) }, i + 1)),
+    }));
   }
 
   const canGenerate = cart.length > 0; // собственикът вече не е задължителен — всяко поле е свободно
   const genHint = cart.length === 0 ? 'Добави поне един гасител в протокола.' : '';
+  const splitNote = cart.length > MAX_PER_PROTOCOL ? `Над ${MAX_PER_PROTOCOL} гасителя → ще се генерират ${Math.ceil(cart.length / MAX_PER_PROTOCOL)} протокола по ≤${MAX_PER_PROTOCOL} (за двустранен печат).` : '';
 
   async function generateWord() {
     if (!canGenerate) { setMail(genHint); return; }
     setGen(true); setMail(null);
     try {
-      const r = await fetch('/api/protocols/custom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildProtocolData()) });
-      if (!r.ok) { setMail('✗ Грешка при генериране'); return; }
-      const blob = await r.blob();
-      const cd = r.headers.get('Content-Disposition') ?? '';
-      const name = /filename="(.+?)"/.exec(cd)?.[1] ?? 'protokol.docx';
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = name; a.click();
-      URL.revokeObjectURL(url);
-      setMail(`✓ Свален протокол с ${cart.length} гасителя`);
+      const chunks = buildChunks();
+      for (let k = 0; k < chunks.length; k++) {
+        const r = await fetch('/api/protocols/custom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chunks[k]) });
+        if (!r.ok) { setMail('✗ Грешка при генериране'); return; }
+        const blob = await r.blob();
+        const cd = r.headers.get('Content-Disposition') ?? '';
+        const name = /filename="(.+?)"/.exec(cd)?.[1] ?? `protokol-${k + 1}.docx`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+        URL.revokeObjectURL(url);
+        if (chunks.length > 1) await new Promise((res) => setTimeout(res, 400)); // пауза между сваляния
+      }
+      setMail(`✓ Свалени ${chunks.length} протокол(а) с ${cart.length} гасителя`);
     } catch { setMail('✗ Мрежова грешка'); } finally { setGen(false); }
   }
 
@@ -258,9 +310,9 @@ export default function StickerScan() {
     if (!canGenerate) { setMail(genHint); return; }
     setGen(true); setMail(null);
     try {
-      const r = await fetch('/api/protocols/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ protocol: buildProtocolData(), to: toEmail.trim() || undefined }) });
+      const r = await fetch('/api/protocols/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ protocols: buildChunks(), to: toEmail.trim() || undefined }) });
       const j = await r.json();
-      setMail(j.ok ? `✓ Изпратено по имейл (протокол № ${j.protocolNo}, ${cart.length} гасителя)` : `✗ ${j.error ?? 'Имейлът не е изпратен'}`);
+      setMail(j.ok ? `✓ Изпратено по имейл (${j.count} протокол(а) № ${j.protocolNo}, ${cart.length} гасителя)` : `✗ ${j.error ?? 'Имейлът не е изпратен'}`);
     } catch { setMail('✗ Мрежова грешка'); } finally { setGen(false); }
   }
 
@@ -334,7 +386,13 @@ export default function StickerScan() {
           </div>
         )}
         {photos.length > 0 && (
-          <button className="btn btn-fire" style={{ ...btnBig, marginTop: 12 }} disabled={busy} onClick={recognize}>{busy ? '🔎 Разпознавам…' : `🔎 Разпознай (${photos.length} сн.)`}</button>
+          <div className="btn-row" style={{ marginTop: 12 }}>
+            <button className="btn btn-fire" style={btnBig} disabled={busy} onClick={() => recognize()}>{busy ? '🔎 Разпознавам…' : `🔎 Разпознай (${photos.length} сн. = 1 гасител)`}</button>
+            <button className="btn" style={{ ...btnBig, flex: '0 0 auto', border: '1px solid var(--line2)', color: 'inherit' }} disabled={busy} onClick={() => recognize('high')} title="По-силно вглеждане за дребен/щампован текст">🔍 По-добре</button>
+          </div>
+        )}
+        {photos.length > 1 && (
+          <button className="btn" style={{ ...btnBig, marginTop: 8, width: '100%', border: '1px solid var(--soon)', color: 'inherit' }} disabled={busy} onClick={recognizeBatch}>📚 Всяка снимка = отделен гасител ({photos.length} бр.)</button>
         )}
         {recMsg && <p className="hint" style={{ marginTop: 10, color: recMsg.startsWith('✗') ? 'var(--over)' : 'var(--ok)' }}>{recMsg}</p>}
 
@@ -348,6 +406,7 @@ export default function StickerScan() {
       <label className="hint" style={{ display: 'block', marginTop: 18 }}>📧 Изпрати протокола на (имейл) <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(по избор; празно = към мен)</span>
         <input list="email-list" value={toEmail} onChange={(e) => setToEmail(e.target.value)} style={fieldStyle} inputMode="email" placeholder="напр. klient@firma.bg" />
       </label>
+      {splitNote && <p className="hint" style={{ marginTop: 8, color: 'var(--soon)' }}>📄 {splitNote}</p>}
       <div className="btn-row" style={{ marginTop: 14 }}>
         <button className="btn btn-fire" style={btnBig} disabled={gen || !canGenerate} onClick={generateWord}>📄 Генерирай Word</button>
         <button className="btn" style={{ ...btnBig, border: '1px solid var(--line2)', color: 'inherit' }} disabled={gen || !canGenerate} onClick={sendEmail}>✉ Изпрати на имейл</button>

@@ -10,7 +10,7 @@ import type { RecognizeResult } from '@/lib/vision/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  let body: { imageBase64?: string; imageBase64List?: string[] };
+  let body: { imageBase64?: string; imageBase64List?: string[]; effort?: 'high' };
   try {
     body = await req.json();
   } catch {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   // Разпознава всяка снимка през Hermes (паралелно), после слива най-доброто по увереност.
   let recs: RecognizeResult[];
   try {
-    recs = await Promise.all(images.map((img) => getVisionProvider().recognize(img)));
+    recs = await Promise.all(images.map((img) => getVisionProvider().recognize(img, body.effort === 'high' ? 'high' : undefined)));
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: `Грешка при разпознаване: ${(e as Error).message}` },
